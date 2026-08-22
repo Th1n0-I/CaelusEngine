@@ -1,9 +1,10 @@
+#define GLFW_INCLUDE_VULKAN
 #include <iostream>
 #include <vulkan/vulkan.h>
-#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <cstdio>
 #include <vector>
+#include <fstream>
 
 struct SwapChain {
     VkSwapchainKHR handle = VK_NULL_HANDLE;
@@ -220,6 +221,38 @@ bool createSwapchain(VkPhysicalDevice& gpu, VkSurfaceKHR& surface, VkDevice& dev
     return true;
 }
 
+static std::vector<char> readFile(const std::string& path) {
+    // Get the file
+    std::ifstream file(path, std::ios::ate | std::ios::binary);
+    if (!file.is_open()) {
+        printf("Failed to open %s\n", path.c_str());
+        return {};
+    }
+
+    // Get the size of the file
+    size_t fileSize = (size_t)file.tellg();
+    std::vector<char> buffer(fileSize);
+
+    // Return the file contents
+    file.seekg(0);
+    file.read(buffer.data(), fileSize);
+    return buffer;
+}
+
+static VkShaderModule createShaderModule(VkDevice& device, const std::vector<char>& code) {
+    VkShaderModuleCreateInfo ci{};
+    ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    ci.codeSize = code.size();
+    ci.pCode = reinterpret_cast<const uint32_t*>(code.data());
+
+    VkShaderModule shaderModule;
+    if (vkCreateShaderModule(device, &ci, nullptr, &shaderModule) != VK_SUCCESS) {
+        printf("Failed to create shader module!\n");
+        return VK_NULL_HANDLE;
+    }
+    return shaderModule;
+}
+
 int main() {
 
     glfwInit();
@@ -253,17 +286,24 @@ int main() {
     SwapChain swapChain;
     if (!createSwapchain(gpu, surface, device, swapChain)) return -1;
 
+    auto vertCode = readFile("shaders/triangle.vert.spv");
+    auto fragCode = readFile("shaders/triangle.frag.spv");
+
+    VkShaderModule vertModule = createShaderModule(device, vertCode);
+    VkShaderModule fragModule = createShaderModule(device, fragCode);
+    printf("Shader modules created\n");
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
     }
 
-    // Acc delete the window and clean everything up
+    // Clean everything up
     glfwDestroyWindow(window);
     for (VkImageView v : swapChain.views)
         vkDestroyImageView(device, v, nullptr);
     vkDestroySwapchainKHR(device, swapChain.handle, nullptr);
-    vkDestroyDevice(device, nullptr);
+    vkDestroyShaderModule(device, vertModule, nullptr);
+    vkDestroyShaderModule(device, fragModule, nullptr);
     vkDestroyDevice(device, nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyInstance(instance, nullptr);
