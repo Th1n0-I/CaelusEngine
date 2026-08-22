@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.24)
 project(CaelusEngine LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
+find_package(Vulkan REQUIRED)
 
 include(FetchContent)
 FetchContent_Declare(glfw
@@ -9,4 +10,4 @@ FetchContent_Declare(glfw
 FetchContent_MakeAvailable(glfw)
 
 add_executable(CaelusEngine main.cpp)
-target_link_libraries(CaelusEngine PRIVATE glfw)
+target_link_libraries(CaelusEngine PRIVATE glfw Vulkan::Vulkan)
