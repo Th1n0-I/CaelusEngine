@@ -5,6 +5,14 @@
 #include <cstdio>
 #include <vector>
 
+struct SwapChain {
+    VkSwapchainKHR handle = VK_NULL_HANDLE;
+    VkFormat format = VK_FORMAT_UNDEFINED;
+    VkExtent2D extent = {};
+    std::vector<VkImage> images = {};
+    std::vector<VkImageView> views = {};
+};
+
 bool initVulkan(VkInstance& instance) {
 
     // Tells the driver which vulkan version we are using
@@ -65,13 +73,14 @@ bool pickGpu(VkInstance& instance, VkPhysicalDevice& gpu) {
 //? returns the index of the queue because the queue doesn't exist yet
 bool findGraphicsQueueFamilyIndex(VkPhysicalDevice& gpu, uint32_t& queueFamilyIndex, VkSurfaceKHR& surface) {
     // find gpu queue families
-    // Run twice, same as in pick_gpu()
+    // Run twice, same as in pickGpu()
     uint32_t familyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(gpu, &familyCount, nullptr);
 
     std::vector<VkQueueFamilyProperties> families(familyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(gpu, &familyCount, families.data());
 
+    // Find which family can draw and present
     for (uint32_t i = 0; i < familyCount; i++) {
         bool canDraw = families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
         VkBool32 canPresent = VK_FALSE;
@@ -117,7 +126,97 @@ bool createLogicalDevice(uint32_t queueFamilyIndex, VkPhysicalDevice& gpu, VkDev
 
     // retrieve the graphicsQueue
     vkGetDeviceQueue(device, queueFamilyIndex, 0, &graphicsQueue);
-    printf("succesfully created logical device!\n");
+    printf("successfully created logical device!\n");
+    return true;
+}
+
+bool createSwapchain(VkPhysicalDevice& gpu, VkSurfaceKHR& surface, VkDevice& device, SwapChain& out) {
+
+    //! GET INFORMATION ABOUT THE SWAPCHAIN
+    // Get some information Idk
+    VkSurfaceCapabilitiesKHR caps;
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, surface, &caps);
+
+    // Which pixel format it supports, call twice like in pickGpu()
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &formatCount, nullptr);
+    std::vector<VkSurfaceFormatKHR> formats(formatCount);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(gpu, surface, &formatCount, &formats[0]);
+
+    // Get the correct format
+    VkSurfaceFormatKHR chosenFormat = formats[0];
+    for (const auto& format : formats) {
+        if (format.format == VK_FORMAT_R8G8B8A8_SRGB &&
+            format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            chosenFormat = format;
+            break;
+        }
+    }
+
+    // How many images to keep in buffer so the cpu doesnt have to wait
+    uint32_t imageCount = caps.minImageCount + 1;
+    if (caps.maxImageCount > 0 && imageCount > caps.maxImageCount)
+        imageCount = caps.maxImageCount;
+
+    VkExtent2D extent = caps.currentExtent;
+
+    //! CREATE THE SWAPCHAIN
+
+    VkSwapchainCreateInfoKHR ci{};
+    ci.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+    ci.surface = surface;
+    ci.minImageCount = imageCount;
+    ci.imageFormat = chosenFormat.format;
+    ci.imageColorSpace = chosenFormat.colorSpace;
+    ci.imageExtent = extent;
+    ci.imageArrayLayers = 1;
+    ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    ci.preTransform = caps.currentTransform;
+    ci.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR; // Dont blend the window with the desktop
+    ci.presentMode = VK_PRESENT_MODE_FIFO_KHR; // VSync
+    ci.clipped = VK_TRUE;
+    ci.oldSwapchain = VK_NULL_HANDLE;
+
+
+    if (vkCreateSwapchainKHR(device, &ci, nullptr, &out.handle) != VK_SUCCESS) {
+        printf("Failed to create swapchain!\n");
+        return false;
+    }
+    out.format = chosenFormat.format;
+    out.extent = extent;
+    printf("Successfully created swapchain! width: %u height: %u \n", extent.width, extent.height);
+
+    //! CREATE IMAGES AND VIEWS
+
+    // Get the amount of images, same double call as always
+    uint32_t imgCount = 0;
+    vkGetSwapchainImagesKHR(device, out.handle, &imgCount, nullptr);
+
+    out.images.resize(imgCount);
+    out.views.resize(imgCount);
+    vkGetSwapchainImagesKHR(device, out.handle, &imgCount, out.images.data());
+
+    // Create one image view per image
+    for (uint32_t i = 0; i < imgCount; i++) {
+        VkImageViewCreateInfo ici{};
+        ici.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        ici.image = out.images[i];
+        ici.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        ici.format = out.format;
+        ici.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // Color data as opposed to something like a depth buffer
+        ici.subresourceRange.baseMipLevel = 0;
+        ici.subresourceRange.levelCount = 1;
+        ici.subresourceRange.baseArrayLayer = 0;
+        ici.subresourceRange.layerCount = 1;
+
+        if (vkCreateImageView(device, &ici, nullptr, &out.views[i]) != VK_SUCCESS) {
+            printf("Failed to create image view %u!\n", i);
+            return false;
+        }
+    }
+    printf("Successfully created %u image views!\n", imgCount);
+
     return true;
 }
 
@@ -151,6 +250,9 @@ int main() {
     VkQueue graphicsQueue;
     if (!createLogicalDevice(queueFamilyIndex, gpu, device, graphicsQueue)) return -1;
 
+    SwapChain swapChain;
+    if (!createSwapchain(gpu, surface, device, swapChain)) return -1;
+
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -158,6 +260,10 @@ int main() {
 
     // Acc delete the window and clean everything up
     glfwDestroyWindow(window);
+    for (VkImageView v : swapChain.views)
+        vkDestroyImageView(device, v, nullptr);
+    vkDestroySwapchainKHR(device, swapChain.handle, nullptr);
+    vkDestroyDevice(device, nullptr);
     vkDestroyDevice(device, nullptr);
     vkDestroySurfaceKHR(instance, surface, nullptr);
     vkDestroyInstance(instance, nullptr);
