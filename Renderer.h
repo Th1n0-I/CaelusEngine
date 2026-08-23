@@ -30,7 +30,7 @@ namespace Caelus {
 
     class Renderer {
     public:
-        explicit Renderer(GLFWwindow* window);
+        explicit Renderer(GLFWwindow* window, std::vector<char> vertCode, std::vector<char> fragCode);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;
@@ -45,6 +45,7 @@ namespace Caelus {
         [[nodiscard]] const VkSemaphore& imageAvailable() const { return m_imageAvailable; }
         [[nodiscard]] const std::vector<VkSemaphore>& renderFinished() const { return m_renderFinished; }
         [[nodiscard]] uint32_t imageIndex() const { return m_imageIndex; }
+        [[nodiscard]] VkPipeline pipeline() const { return m_pipeline; }
 
         VkCommandBuffer beginFrame(const float clearColor[4]);
         void endFrame();
@@ -61,6 +62,9 @@ namespace Caelus {
         VkFence m_inFlight = VK_NULL_HANDLE;
         VkSemaphore m_imageAvailable = VK_NULL_HANDLE;
         std::vector<VkSemaphore> m_renderFinished;
+
+        VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
+        VkPipeline m_pipeline = VK_NULL_HANDLE;
 
         uint32_t m_imageIndex = 0;
     };

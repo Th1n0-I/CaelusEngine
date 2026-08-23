@@ -12,11 +12,6 @@
 #include "Renderer.h"
 
 
-
-
-
-
-
 static std::vector<char> readFile(const std::string &path) {
     // Get the file
     std::ifstream file(path, std::ios::ate | std::ios::binary);
@@ -35,20 +30,6 @@ static std::vector<char> readFile(const std::string &path) {
     return buffer;
 }
 
-static VkShaderModule createShaderModule(const VkDevice &device, const std::vector<char> &code) {
-    VkShaderModuleCreateInfo ci{};
-    ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    ci.codeSize = code.size();
-    ci.pCode = reinterpret_cast<const uint32_t *>(code.data());
-
-    VkShaderModule shaderModule;
-    if (vkCreateShaderModule(device, &ci, nullptr, &shaderModule) != VK_SUCCESS) {
-        printf("Failed to create shader module!\n");
-        return VK_NULL_HANDLE;
-    }
-    return shaderModule;
-}
-
 int main() {
 
     glfwInit();
@@ -56,106 +37,13 @@ int main() {
     // finds monitors and hooks to the os type shi
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-    // Creates a window >_<
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Caelus", nullptr, nullptr);
-    Caelus::Renderer renderer(window);
-
     auto vertCode = readFile("shaders/triangle.vert.spv");
     auto fragCode = readFile("shaders/triangle.frag.spv");
 
-    VkShaderModule vertModule = createShaderModule(renderer.context().device, vertCode);
-    VkShaderModule fragModule = createShaderModule(renderer.context().device, fragCode);
-    printf("Shader modules created\n");
+    // Creates a window >_<
+    GLFWwindow* window = glfwCreateWindow(800, 600, "Caelus", nullptr, nullptr);
+    Caelus::Renderer renderer(window, vertCode, fragCode);
 
-    //! FUCKING PIPELINE SHIT
-
-    VkPipelineShaderStageCreateInfo stages[2]{};
-
-    stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    stages[0].module = vertModule;
-    stages[0].pName = "main";
-
-    stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    stages[1].module = fragModule;
-    stages[1].pName = "main";
-
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
-    inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-
-    VkPipelineViewportStateCreateInfo viewportInfo{};
-    viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    viewportInfo.viewportCount = 1;
-    viewportInfo.scissorCount = 1;
-
-    VkPipelineRasterizationStateCreateInfo rasterizationInfo{};
-    rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
-    rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
-    rasterizationInfo.lineWidth = 1.0f;
-
-    VkPipelineMultisampleStateCreateInfo multisampleInfo{};
-    multisampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    VkPipelineColorBlendAttachmentState blendAttachment{};
-    blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
-                                     VK_COLOR_COMPONENT_A_BIT;
-    blendAttachment.blendEnable = VK_FALSE;
-
-    VkPipelineColorBlendStateCreateInfo colorBlendingInfo{};
-    colorBlendingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    colorBlendingInfo.attachmentCount = 1;
-    colorBlendingInfo.pAttachments = &blendAttachment;
-
-    VkDynamicState dynamics[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
-    VkPipelineDynamicStateCreateInfo dynamicInfo{};
-    dynamicInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamicInfo.dynamicStateCount = 2;
-    dynamicInfo.pDynamicStates = dynamics;
-
-    VkPipelineLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-
-    VkPipelineLayout layout;
-    vkCreatePipelineLayout(renderer.context().device, &layoutInfo, nullptr, &layout);
-
-    VkPipelineRenderingCreateInfo renderingInfo{};
-    renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
-    renderingInfo.colorAttachmentCount = 1;
-    renderingInfo.pColorAttachmentFormats = &renderer.swapChain().format;
-
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineInfo.pNext = &renderingInfo;
-    pipelineInfo.stageCount = 2;
-    pipelineInfo.pStages = stages;
-    pipelineInfo.pVertexInputState = &vertexInputInfo;
-    pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
-    pipelineInfo.pViewportState = &viewportInfo;
-    pipelineInfo.pRasterizationState = &rasterizationInfo;
-    pipelineInfo.pMultisampleState = &multisampleInfo;
-    pipelineInfo.pColorBlendState = &colorBlendingInfo;
-    pipelineInfo.pDynamicState = &dynamicInfo;
-    pipelineInfo.layout = layout;
-    pipelineInfo.renderPass = VK_NULL_HANDLE;
-
-    VkPipeline pipeline;
-    if (vkCreateGraphicsPipelines(renderer.context().device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
-        printf("Failed to create graphics pipeline!\n");
-        return -1;
-    }
-    printf("Pipeline created!\n");
-
-    vkDestroyShaderModule(renderer.context().device, vertModule, nullptr);
-    vkDestroyShaderModule(renderer.context().device, fragModule, nullptr);
-    
     // The context, whatever that is
     ImGui::CreateContext();
 
@@ -166,6 +54,11 @@ int main() {
 
     // Links imgui with glfw
     ImGui_ImplGlfw_InitForVulkan(window, true);
+
+    VkPipelineRenderingCreateInfo renderingInfo{};
+    renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+    renderingInfo.colorAttachmentCount = 1;
+    renderingInfo.pColorAttachmentFormats = &renderer.swapChain().format;
 
     ImGui_ImplVulkan_InitInfo initInfo{};
     initInfo.ApiVersion = VK_API_VERSION_1_3;
@@ -202,7 +95,7 @@ int main() {
 
         VkCommandBuffer cmd = renderer.beginFrame(clearColor);
 
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline());
         vkCmdDraw(cmd, 3, 1, 0, 0);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
@@ -216,9 +109,6 @@ int main() {
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-
-    vkDestroyPipeline(renderer.context().device, pipeline, nullptr);
-    vkDestroyPipelineLayout(renderer.context().device, layout, nullptr);
 
     glfwDestroyWindow(window);
     glfwTerminate();

@@ -9,6 +9,20 @@
 
 
 namespace Caelus {
+    static VkShaderModule createShaderModule(const VkDevice &device, const std::vector<char> &code) {
+        VkShaderModuleCreateInfo ci{};
+        ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        ci.codeSize = code.size();
+        ci.pCode = reinterpret_cast<const uint32_t *>(code.data());
+
+        VkShaderModule shaderModule;
+        if (vkCreateShaderModule(device, &ci, nullptr, &shaderModule) != VK_SUCCESS) {
+            printf("Failed to create shader module!\n");
+            return VK_NULL_HANDLE;
+        }
+        return shaderModule;
+    }
+
     static bool createSwapChain(const VkPhysicalDevice &gpu, const VkSurfaceKHR &surface, const VkDevice &device, SwapChain &out) {
         //! GET INFORMATION ABOUT THE SWAPCHAIN
         // Get some information Idk
@@ -222,6 +236,91 @@ namespace Caelus {
         return true;
     }
 
+    static bool createPipeline(const VkShaderModule& vertModule, const VkShaderModule& fragModule, const VkDevice& device, const VkFormat format, VkPipelineLayout& layout, VkPipeline& pipeline) {
+        VkPipelineShaderStageCreateInfo stages[2]{};
+
+        stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+        stages[0].module = vertModule;
+        stages[0].pName = "main";
+
+        stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+        stages[1].module = fragModule;
+        stages[1].pName = "main";
+
+        VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+        vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+        VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
+        inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+        inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+        VkPipelineViewportStateCreateInfo viewportInfo{};
+        viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        viewportInfo.viewportCount = 1;
+        viewportInfo.scissorCount = 1;
+
+        VkPipelineRasterizationStateCreateInfo rasterizationInfo{};
+        rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
+        rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
+        rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+        rasterizationInfo.lineWidth = 1.0f;
+
+        VkPipelineMultisampleStateCreateInfo multisampleInfo{};
+        multisampleInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        multisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+
+        VkPipelineColorBlendAttachmentState blendAttachment{};
+        blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
+                                         VK_COLOR_COMPONENT_A_BIT;
+        blendAttachment.blendEnable = VK_FALSE;
+
+        VkPipelineColorBlendStateCreateInfo colorBlendingInfo{};
+        colorBlendingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        colorBlendingInfo.attachmentCount = 1;
+        colorBlendingInfo.pAttachments = &blendAttachment;
+
+        VkDynamicState dynamics[] = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+        VkPipelineDynamicStateCreateInfo dynamicInfo{};
+        dynamicInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+        dynamicInfo.dynamicStateCount = 2;
+        dynamicInfo.pDynamicStates = dynamics;
+
+        VkPipelineLayoutCreateInfo layoutInfo{};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+        vkCreatePipelineLayout(device, &layoutInfo, nullptr, &layout);
+
+        VkPipelineRenderingCreateInfo renderingInfo{};
+        renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
+        renderingInfo.colorAttachmentCount = 1;
+        renderingInfo.pColorAttachmentFormats = &format;
+
+        VkGraphicsPipelineCreateInfo pipelineInfo{};
+        pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        pipelineInfo.pNext = &renderingInfo;
+        pipelineInfo.stageCount = 2;
+        pipelineInfo.pStages = stages;
+        pipelineInfo.pVertexInputState = &vertexInputInfo;
+        pipelineInfo.pInputAssemblyState = &inputAssemblyInfo;
+        pipelineInfo.pViewportState = &viewportInfo;
+        pipelineInfo.pRasterizationState = &rasterizationInfo;
+        pipelineInfo.pMultisampleState = &multisampleInfo;
+        pipelineInfo.pColorBlendState = &colorBlendingInfo;
+        pipelineInfo.pDynamicState = &dynamicInfo;
+        pipelineInfo.layout = layout;
+        pipelineInfo.renderPass = VK_NULL_HANDLE;
+
+        if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
+            printf("Failed to create graphics pipeline!\n");
+            return false;
+        }
+        printf("Pipeline created!\n");
+        return true;
+    }
+
     void Renderer::resizeSwapChain(GLFWwindow* window) {
         int width = 0, height = 0;
         glfwGetFramebufferSize(window, &width, &height);
@@ -241,7 +340,7 @@ namespace Caelus {
         printf("Successfully resized swapChain!\n");
     }
 
-    Renderer::Renderer(GLFWwindow *window) : m_window(window) {
+    Renderer::Renderer(GLFWwindow *window, std::vector<char> vertCode, std::vector<char> fragCode) : m_window(window) {
         VulkanContext context;
 
         createInstance(context.instance);
@@ -294,6 +393,14 @@ namespace Caelus {
         for (auto &s: m_renderFinished) {
             vkCreateSemaphore(m_context.device, &semaphoreInfo, nullptr, &s);
         }
+
+        VkShaderModule vertModule = createShaderModule(m_context.device, vertCode);
+        VkShaderModule fragModule = createShaderModule(m_context.device, fragCode);
+
+        createPipeline(vertModule, fragModule, m_context.device, m_swapChain.format,m_pipelineLayout,m_pipeline);
+
+        vkDestroyShaderModule(m_context.device, vertModule, nullptr);
+        vkDestroyShaderModule(m_context.device, fragModule, nullptr);
     }
 
     VkCommandBuffer Renderer::beginFrame(const float clearColor[4]) {
@@ -356,6 +463,8 @@ namespace Caelus {
 
         VkRect2D scissor{.offset = {.x = 0,.y = 0}, .extent = m_swapChain.extent};
         vkCmdSetScissor(m_cmd, 0, 1, &scissor);
+
+
 
         return m_cmd;
     }
@@ -426,18 +535,23 @@ namespace Caelus {
 
     Renderer::~Renderer() {
         vkDeviceWaitIdle(m_context.device);
-        for (VkSemaphore s: m_renderFinished)
+        for (const VkSemaphore s: m_renderFinished)
             vkDestroySemaphore(m_context.device, s, nullptr);
         vkDestroySemaphore(m_context.device, m_imageAvailable, nullptr);
         vkDestroyFence(m_context.device, m_inFlight, nullptr);
 
         vkDestroyCommandPool(m_context.device, m_commandPool, nullptr); // frees `cmd` too
-        for (VkImageView v: m_swapChain.views)
+        for (const VkImageView v: m_swapChain.views)
             vkDestroyImageView(m_context.device, v, nullptr);
         vkDestroySwapchainKHR(m_context.device, m_swapChain.handle, nullptr);
+
+        vkDestroyPipeline(m_context.device, m_pipeline, nullptr);
+        vkDestroyPipelineLayout(m_context.device, m_pipelineLayout, nullptr);
 
         vkDestroyDevice(m_context.device, nullptr);
         vkDestroySurfaceKHR(m_context.instance, m_context.surface, nullptr);
         vkDestroyInstance(m_context.instance, nullptr);
+
+
     }
 } // Caelus
