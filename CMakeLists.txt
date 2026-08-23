@@ -26,7 +26,9 @@ add_library(imgui STATIC
 target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
 target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
 
-add_executable(CaelusEngine main.cpp)
+add_executable(CaelusEngine main.cpp
+        Renderer.cpp
+        Renderer.h)
 target_link_libraries(CaelusEngine PRIVATE glfw Vulkan::Vulkan imgui)
 
 find_program(GLSLC glslc HINTS "$ENV{VULKAN_SDK}/Bin")
