@@ -5,6 +5,9 @@
 #include <cstdio>
 #include <vector>
 #include <fstream>
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
 
 struct SwapChain {
     VkSwapchainKHR handle = VK_NULL_HANDLE;
@@ -387,9 +390,7 @@ int main() {
     vkDestroyShaderModule(device, vertModule, nullptr);
     vkDestroyShaderModule(device, fragModule, nullptr);
 
-    //! END OF PIPELINE SHIT
-
-    //! OTHER SHITT
+    //! OTHER SHIT IM NOT SURE WHAT THIS IS
 
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -434,9 +435,53 @@ int main() {
         vkCreateSemaphore(device, &semaphoreInfo, nullptr, &s);
     }
 
+    //! IMGUI SETUP
+
+    // The context, whatever that is
+    ImGui::CreateContext();
+
+    // The input / output, you tell it what inputs ur doing and it tells you if those inputs are meant for ImGui
+    ImGuiIO &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Lets windows snap to each other
+    ImGui::StyleColorsDark(); // Dark mode cuz i don wanna get flashbanged
+
+    // Links imgui with glfw
+    ImGui_ImplGlfw_InitForVulkan(window, true);
+
+    ImGui_ImplVulkan_InitInfo initInfo{};
+    initInfo.ApiVersion = VK_API_VERSION_1_3;
+    initInfo.Instance = instance;
+    initInfo.PhysicalDevice = gpu;
+    initInfo.Device = device;
+    initInfo.QueueFamily = queueFamilyIndex;
+    initInfo.Queue = graphicsQueue;
+    initInfo.DescriptorPoolSize = IMGUI_IMPL_VULKAN_MINIMUM_SAMPLED_IMAGE_POOL_SIZE;
+    initInfo.MinImageCount = 2;
+    initInfo.ImageCount = static_cast<uint32_t>(swapChain.images.size());
+    initInfo.UseDynamicRendering = true;
+    initInfo.PipelineInfoMain.PipelineRenderingCreateInfo = renderingInfo;
+
+    ImGui_ImplVulkan_Init(&initInfo);
+    printf("Successfully initialized ImGui!\n");
+
+    float clearColor[4] = { 0.02f, 0.02f, 0.05f, 1.0f };
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+
+        //! ImGui
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::Begin("Caelus");
+        ImGui::Text("%.1f FPS", io.Framerate);
+        ImGui::ColorPicker3("Clear color", &clearColor[0]);
+        ImGui::End();
+
+        ImGui::Render();
+
+        //! Rendering
 
         vkWaitForFences(device, 1, &inFlight, VK_TRUE, UINT64_MAX);
         vkResetFences(device, 1, &inFlight);
@@ -476,7 +521,7 @@ int main() {
         colorAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         colorAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         colorAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachmentInfo.clearValue.color = {0.02f, 0.02f, 0.05f, 1.0f};
+        colorAttachmentInfo.clearValue.color = {clearColor[0],clearColor[1], clearColor[2],clearColor[3]};
 
         VkRenderingInfo renderInfo{};
         renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
@@ -499,6 +544,7 @@ int main() {
         vkCmdSetScissor(cmd, 0, 1, &scissor);
 
         vkCmdDraw(cmd, 3, 1, 0, 0);
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
         vkCmdEndRendering(cmd);
 
         VkImageMemoryBarrier2 toPresent = barrier;
@@ -554,6 +600,9 @@ int main() {
 
     // Clean everything up
 
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     vkDestroyPipeline(device, pipeline, nullptr);
     vkDestroyPipelineLayout(device, layout, nullptr);
