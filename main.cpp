@@ -10,8 +10,9 @@
 #include <imgui_impl_vulkan.h>
 
 #include "Renderer.h"
+#include "Math/Math.h"
 
-
+using namespace Caelus::Math;
 
 static std::vector<char> readFile(const std::string &path) {
     // Get the file
@@ -83,6 +84,14 @@ int main() {
          0.5,  0.5,
         -0.5,  0.5
     };
+
+    Matrix4x4 t = identity(); t.m[3][0] = 10;
+    Matrix4x4 s = identity(); s.m[0][0] = 2;
+
+    auto v = Vector4{.x = 1, .y = 3, .z = 2, .w = 1};
+    v = (t * s) * v;
+    printf("(%f, %f, %f, %f)", v.x, v.y, v.z, v.w);
+
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
