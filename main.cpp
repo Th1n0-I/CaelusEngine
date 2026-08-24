@@ -12,6 +12,7 @@
 #include "Renderer.h"
 
 
+
 static std::vector<char> readFile(const std::string &path) {
     // Get the file
     std::ifstream file(path, std::ios::ate | std::ios::binary);
@@ -77,6 +78,11 @@ int main() {
     printf("Successfully initialized ImGui!\n");
 
     float clearColor[4] = { 0.02f, 0.02f, 0.05f, 1.0f };
+    float positions[6] = {
+         0.0, -0.5,
+         0.5,  0.5,
+        -0.5,  0.5
+    };
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -89,15 +95,31 @@ int main() {
         ImGui::Begin("Caelus");
         ImGui::Text("%.1f FPS", io.Framerate);
         ImGui::ColorPicker3("Clear color", &clearColor[0]);
+        ImGui::DragFloat2("vert1Pos", &positions[0], 0.01f);
+        ImGui::DragFloat2("vert2Pos", &positions[2], 0.01f);
+        ImGui::DragFloat2("vert3Pos", &positions[4], 0.01f);
+
         ImGui::End();
 
         ImGui::Render();
 
         VkCommandBuffer cmd = renderer.beginFrame(clearColor);
 
+        Caelus::Consts consts{};
+        consts.res[0] = static_cast<int>(renderer.swapChain().extent.width);
+        consts.res[1] = static_cast<int>(renderer.swapChain().extent.height);
+
+        for (int i = 0; i < 6; i++)
+        {
+            consts.pos[i] = positions[i];
+        }
+
+        vkCmdPushConstants(cmd, renderer.pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Caelus::Consts), &consts);
+
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline());
         vkCmdDraw(cmd, 3, 1, 0, 0);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+
 
         renderer.endFrame();
     }

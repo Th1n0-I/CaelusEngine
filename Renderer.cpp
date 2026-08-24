@@ -236,7 +236,7 @@ namespace Caelus {
         return true;
     }
 
-    static bool createPipeline(const VkShaderModule& vertModule, const VkShaderModule& fragModule, const VkDevice& device, const VkFormat format, VkPipelineLayout& layout, VkPipeline& pipeline) {
+    static bool createPipeline(const VkShaderModule& vertModule, const VkShaderModule& fragModule, const VkDevice& device, const VkFormat format, VkPipelineLayout& layout, VkPipeline& pipeline, VkPushConstantRange& range) {
         VkPipelineShaderStageCreateInfo stages[2]{};
 
         stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -290,6 +290,12 @@ namespace Caelus {
 
         VkPipelineLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+        range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+        range.offset = 0;
+        range.size = sizeof(Consts);
+        layoutInfo.pushConstantRangeCount = 1;
+        layoutInfo.pPushConstantRanges = &range;
 
         vkCreatePipelineLayout(device, &layoutInfo, nullptr, &layout);
 
@@ -397,7 +403,7 @@ namespace Caelus {
         VkShaderModule vertModule = createShaderModule(m_context.device, vertCode);
         VkShaderModule fragModule = createShaderModule(m_context.device, fragCode);
 
-        createPipeline(vertModule, fragModule, m_context.device, m_swapChain.format,m_pipelineLayout,m_pipeline);
+        createPipeline(vertModule, fragModule, m_context.device, m_swapChain.format,m_pipelineLayout,m_pipeline, m_range);
 
         vkDestroyShaderModule(m_context.device, vertModule, nullptr);
         vkDestroyShaderModule(m_context.device, fragModule, nullptr);

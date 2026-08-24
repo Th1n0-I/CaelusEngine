@@ -10,6 +10,12 @@
 #include <vector>
 
 namespace Caelus {
+    struct Consts
+    {
+        int res[2];
+        float pos[6];
+    };
+
     struct VulkanContext {
         VkInstance instance = VK_NULL_HANDLE;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -46,6 +52,7 @@ namespace Caelus {
         [[nodiscard]] const std::vector<VkSemaphore>& renderFinished() const { return m_renderFinished; }
         [[nodiscard]] uint32_t imageIndex() const { return m_imageIndex; }
         [[nodiscard]] VkPipeline pipeline() const { return m_pipeline; }
+        [[nodiscard]] VkPipelineLayout pipelineLayout() const { return m_pipelineLayout; }
 
         VkCommandBuffer beginFrame(const float clearColor[4]);
         void endFrame();
@@ -63,6 +70,7 @@ namespace Caelus {
         VkSemaphore m_imageAvailable = VK_NULL_HANDLE;
         std::vector<VkSemaphore> m_renderFinished;
 
+        VkPushConstantRange m_range;
         VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
         VkPipeline m_pipeline = VK_NULL_HANDLE;
 
