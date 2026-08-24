@@ -29,7 +29,9 @@ target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
 add_executable(CaelusEngine main.cpp
         Renderer.cpp
         Renderer.h
-        Math/Math.h)
+        Math/Math.h
+        Camera.cpp
+        Camera.h)
 target_link_libraries(CaelusEngine PRIVATE glfw Vulkan::Vulkan imgui)
 
 find_program(GLSLC glslc HINTS "$ENV{VULKAN_SDK}/Bin")

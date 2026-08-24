@@ -21,9 +21,7 @@ layout(push_constant) uniform Consts{
 } pc;
 
 void main(){
-    float aspect_ratio = float(pc.res[0]) / float(pc.res[1]);
-    vec4 pos = positions[gl_VertexIndex] * pc.matrix;
-    pos.x /= aspect_ratio;
-    gl_Position = vec4(pos.xy , 0.0, 1.0);
+    vec4 pos = pc.matrix * positions[gl_VertexIndex];
+    gl_Position = pos;
     fragColor = colors[gl_VertexIndex];
 }

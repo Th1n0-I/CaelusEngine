@@ -9,6 +9,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 
+#include "Camera.h"
 #include "Renderer.h"
 #include "Math/Math.h"
 
@@ -83,7 +84,9 @@ int main() {
     float rotation[3] = { 0.0f, 0.0f, 0.0f };
     float scale[3] = { 1.0f, 1.0f, 1.0f };
 
-    bool showRenderSettings = false;
+    Caelus::Camera camera{};
+
+
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -114,7 +117,15 @@ int main() {
 
         ImGui::Render();
 
-        Matrix4x4 matrix = ::scale(Vector3(scale[0], scale[1], scale[2])) * ::rotateZ(rotation[2]) * ::translate(Vector3(position[0], position[1], position[2]));
+        const float aspect = static_cast<float>(renderer.swapChain().extent.width)
+                       / static_cast<float>(renderer.swapChain().extent.height);
+
+        Matrix4x4 matrix = camera.GetPerspective(aspect, 0.1f, 100.0f) *
+            translate(Vector3(position[0], position[1], position[2]))  *
+            rotateZ(rotation[2]) *
+            rotateY(rotation[1]) *
+            rotateX(rotation[0]) *
+            ::scale(Vector3(scale[0], scale[1], scale[2]));
 
         VkCommandBuffer cmd = renderer.beginFrame(clearColor);
         if (cmd == VK_NULL_HANDLE) continue;
