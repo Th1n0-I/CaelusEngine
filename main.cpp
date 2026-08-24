@@ -83,6 +83,7 @@ int main() {
     float rotation[3] = { 0.0f, 0.0f, 0.0f };
     float scale[3] = { 1.0f, 1.0f, 1.0f };
 
+    bool showRenderSettings = false;
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -92,12 +93,16 @@ int main() {
         ImGui::NewFrame();
         ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
 
-        ImGui::Begin("Other");
-
-        if (ImGui::Button("Renderer"))
-            ImGui::ColorPicker3("Clear color", &clearColor[0]);
-
-        ImGui::End();
+        if (ImGui::BeginMainMenuBar()) {
+            if (ImGui::BeginMenu("Renderer")) {
+                if (ImGui::BeginMenu("Clear Color")) {
+                    ImGui::ColorPicker3("Clear Color", &clearColor[0]);
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMainMenuBar();
+        }
 
         ImGui::Begin("Caelus");
         ImGui::Text("%.1f FPS", io.Framerate);
