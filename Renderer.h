@@ -13,7 +13,8 @@ namespace Caelus {
     struct Consts
     {
         int res[2];
-        float pos[6];
+        float pad_[2];
+        float matrix[4][4];
     };
 
     struct VulkanContext {

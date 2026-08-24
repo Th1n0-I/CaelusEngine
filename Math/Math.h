@@ -87,6 +87,14 @@ namespace Caelus::Math {
         return r;
     }
 
+    static Matrix4x4 scale(const Vector3& scale) {
+        Matrix4x4 r = identity();
+        r.m[0][0] = scale.x;
+        r.m[1][1] = scale.y;
+        r.m[2][2] = scale.z;
+        return r;
+    }
+
     static Matrix4x4 rotateX(const float theta) {
         Matrix4x4 r = identity();
         r.m[1][1] = cosf(theta);
@@ -115,6 +123,14 @@ namespace Caelus::Math {
     }
 
     static Matrix4x4 translate(const Vector4& translate) {
+        Matrix4x4 r = identity();
+        r.m[0][3] = translate.x;
+        r.m[1][3] = translate.y;
+        r.m[2][3] = translate.z;
+        return r;
+    }
+
+    static Matrix4x4 translate(const Vector3& translate) {
         Matrix4x4 r = identity();
         r.m[0][3] = translate.x;
         r.m[1][3] = translate.y;

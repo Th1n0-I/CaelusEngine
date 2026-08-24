@@ -29,7 +29,6 @@ target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
 add_executable(CaelusEngine main.cpp
         Renderer.cpp
         Renderer.h
-        Math/Math.cpp
         Math/Math.h)
 target_link_libraries(CaelusEngine PRIVATE glfw Vulkan::Vulkan imgui)
 

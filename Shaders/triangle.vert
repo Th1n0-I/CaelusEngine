@@ -1,9 +1,9 @@
 #version 450
 
-vec2 positions[3] = vec2[](
-vec2(0.0, -0.5),
-vec2(0.5, 0.5),
-vec2(-0.5,0.5)
+vec4 positions[3] = vec4[](
+vec4(0.0, -0.5, 0.0, 1.0),
+vec4(0.5, 0.5, 0.0, 1.0),
+vec4(-0.5,0.5, 0.0, 1.0)
 );
 
 vec3 colors[3] = vec3[](
@@ -16,12 +16,14 @@ layout(location = 0) out vec3 fragColor;
 
 layout(push_constant) uniform Consts{
     int res[2];
-    float pos[6];
+    float pad_[2];
+    mat4 matrix;
 } pc;
 
 void main(){
     float aspect_ratio = float(pc.res[0]) / float(pc.res[1]);
-
-    gl_Position = vec4(pc.pos[gl_VertexIndex * 2] / aspect_ratio, pc.pos[gl_VertexIndex * 2 + 1] , 0.0, 1.0);
+    vec4 pos = positions[gl_VertexIndex] * pc.matrix;
+    pos.x /= aspect_ratio;
+    gl_Position = vec4(pos.xy , 0.0, 1.0);
     fragColor = colors[gl_VertexIndex];
 }

@@ -79,18 +79,9 @@ int main() {
     printf("Successfully initialized ImGui!\n");
 
     float clearColor[4] = { 0.02f, 0.02f, 0.05f, 1.0f };
-    float positions[6] = {
-         0.0, -0.5,
-         0.5,  0.5,
-        -0.5,  0.5
-    };
-
-    Matrix4x4 t = identity(); t.m[3][0] = 10;
-    Matrix4x4 s = identity(); s.m[0][0] = 2;
-
-    auto v = Vector4{.x = 1, .y = 3, .z = 2, .w = 1};
-    v = (t * s) * v;
-    printf("(%f, %f, %f, %f)", v.x, v.y, v.z, v.w);
+    float position[3] = { 0.0f, 0.0f, 0.0f };
+    float rotation[3] = { 0.0f, 0.0f, 0.0f };
+    float scale[3] = { 1.0f, 1.0f, 1.0f };
 
 
     while (!glfwWindowShouldClose(window)) {
@@ -101,27 +92,35 @@ int main() {
         ImGui::NewFrame();
         ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
 
+        ImGui::Begin("Other");
+
+        if (ImGui::Button("Renderer"))
+            ImGui::ColorPicker3("Clear color", &clearColor[0]);
+
+        ImGui::End();
+
         ImGui::Begin("Caelus");
         ImGui::Text("%.1f FPS", io.Framerate);
-        ImGui::ColorPicker3("Clear color", &clearColor[0]);
-        ImGui::DragFloat2("vert1Pos", &positions[0], 0.01f);
-        ImGui::DragFloat2("vert2Pos", &positions[2], 0.01f);
-        ImGui::DragFloat2("vert3Pos", &positions[4], 0.01f);
+        ImGui::DragFloat3("Position", &position[0], 0.01f);
+        ImGui::DragFloat3("Rotation", &rotation[0], 0.01f);
+        ImGui::DragFloat3("Scale", &scale[0], 0.01f);
 
         ImGui::End();
 
         ImGui::Render();
 
+        Matrix4x4 matrix = ::scale(Vector3(scale[0], scale[1], scale[2])) * ::rotateZ(rotation[2]) * ::translate(Vector3(position[0], position[1], position[2]));
+
         VkCommandBuffer cmd = renderer.beginFrame(clearColor);
+        if (cmd == VK_NULL_HANDLE) continue;
 
         Caelus::Consts consts{};
         consts.res[0] = static_cast<int>(renderer.swapChain().extent.width);
         consts.res[1] = static_cast<int>(renderer.swapChain().extent.height);
 
-        for (int i = 0; i < 6; i++)
-        {
-            consts.pos[i] = positions[i];
-        }
+        for (int i = 0; i < 4; i++)
+            for (int j = 0; j < 4; j++)
+                consts.matrix[i][j] = matrix.m[i][j];
 
         vkCmdPushConstants(cmd, renderer.pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Caelus::Consts), &consts);
 
