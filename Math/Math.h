@@ -46,6 +46,7 @@ namespace Caelus::Math {
         return { a / a.length() };
     }
 
+
     struct Matrix4x4 {
         // [COLUMN][ROW]
         float m[4][4];
@@ -107,8 +108,8 @@ namespace Caelus::Math {
     static Matrix4x4 rotateY(const float theta) {
         Matrix4x4 r = identity();
         r.m[0][0] = cosf(theta);
-        r.m[0][2] = sinf(theta);
-        r.m[2][0] = -sinf(theta);
+        r.m[0][2] = -sinf(theta);
+        r.m[2][0] = sinf(theta);
         r.m[2][2] = cosf(theta);
         return r;
     }

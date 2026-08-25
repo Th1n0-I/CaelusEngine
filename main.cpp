@@ -109,9 +109,17 @@ int main() {
 
         ImGui::Begin("Caelus");
         ImGui::Text("%.1f FPS", io.Framerate);
-        ImGui::DragFloat3("Position", &position[0], 0.01f);
-        ImGui::DragFloat3("Rotation", &rotation[0], 0.01f);
-        ImGui::DragFloat3("Scale", &scale[0], 0.01f);
+        if (ImGui::CollapsingHeader("Triangle")){
+            ImGui::DragFloat3("Position", &position[0], 0.01f);
+            ImGui::DragFloat3("Rotation", &rotation[0], 0.01f);
+            ImGui::DragFloat3("Scale", &scale[0], 0.01f);
+        }
+        if (ImGui::CollapsingHeader("Camera")) {
+            ImGui::DragFloat3("Position", &camera.GetPosition().x, 0.01f);
+            ImGui::DragFloat("Pitch", &camera.GetPitch(), 0.01f);
+            ImGui::DragFloat("Yaw", &camera.GetYaw(), 0.01f);
+        }
+        ImGui::Separator();
 
         ImGui::End();
 
@@ -120,12 +128,17 @@ int main() {
         const float aspect = static_cast<float>(renderer.swapChain().extent.width)
                        / static_cast<float>(renderer.swapChain().extent.height);
 
-        Matrix4x4 matrix = camera.GetPerspective(aspect, 0.1f, 100.0f) *
+        Matrix4x4 viewProj =
+            camera.GetPerspective(aspect, 0.1f, 100.0f) *
+                        camera.GetView();
+        Matrix4x4 model =
             translate(Vector3(position[0], position[1], position[2]))  *
-            rotateZ(rotation[2]) *
-            rotateY(rotation[1]) *
-            rotateX(rotation[0]) *
-            ::scale(Vector3(scale[0], scale[1], scale[2]));
+                        rotateZ(rotation[2]) *
+                        rotateY(rotation[1]) *
+                        rotateX(rotation[0]) *
+                        ::scale(Vector3(scale[0], scale[1], scale[2]));
+        auto matrix = viewProj * model;
+
 
         VkCommandBuffer cmd = renderer.beginFrame(clearColor);
         if (cmd == VK_NULL_HANDLE) continue;

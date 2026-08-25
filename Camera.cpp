@@ -4,11 +4,13 @@
 
 #include "Camera.h"
 
+using namespace Caelus::Math;
+
 namespace Caelus {
-    Math::Matrix4x4 Camera::GetPerspective(const float aspect, const float nearZ, const float farZ) const {
+    Matrix4x4 Camera::GetPerspective(const float aspect, const float nearZ, const float farZ) const {
         const float f = 1.0f / tanf(m_fov * 0.5f);
 
-        Math::Matrix4x4 r{};
+        Matrix4x4 r{};
 
         r.m[0][0] = f / aspect;
         r.m[1][1] = -f;
@@ -16,5 +18,13 @@ namespace Caelus {
         r.m[3][2] = (farZ * nearZ) / (nearZ - farZ);
         r.m[2][3] = -1.0f;
         return r;
+    }
+
+    Matrix4x4 Camera::GetView() const {
+        return  ::rotateX(-m_pitch) *
+                ::rotateY(-m_yaw) *
+                ::translate(::Vector3(-m_position.x,
+                    -m_position.y,
+                    -m_position.z));
     }
 }
