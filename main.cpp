@@ -80,7 +80,7 @@ int main() {
     printf("Successfully initialized ImGui!\n");
 
     float clearColor[4] = { 0.02f, 0.02f, 0.05f, 1.0f };
-    float position[3] = { 0.0f, 0.0f, 0.0f };
+    WorldPos position = { .x = 0.0f, .y = 0.0f, .z = -3.0f };
     float rotation[3] = { 0.0f, 0.0f, 0.0f };
     float scale[3] = { 1.0f, 1.0f, 1.0f };
 
@@ -110,12 +110,12 @@ int main() {
         ImGui::Begin("Caelus");
         ImGui::Text("%.1f FPS", io.Framerate);
         if (ImGui::CollapsingHeader("Triangle")){
-            ImGui::DragFloat3("Position", &position[0], 0.01f);
+            ImGui::DragScalarN("Position", ImGuiDataType_Double, &position.x, 3, 0.01f);
             ImGui::DragFloat3("Rotation", &rotation[0], 0.01f);
             ImGui::DragFloat3("Scale", &scale[0], 0.01f);
         }
         if (ImGui::CollapsingHeader("Camera")) {
-            ImGui::DragFloat3("Position", &camera.GetPosition().x, 0.01f);
+            ImGui::DragScalarN("Position", ImGuiDataType_Double, &camera.GetPosition().x, 3, 0.01f);
             ImGui::DragFloat("Pitch", &camera.GetPitch(), 0.01f);
             ImGui::DragFloat("Yaw", &camera.GetYaw(), 0.01f);
         }
@@ -128,11 +128,13 @@ int main() {
         const float aspect = static_cast<float>(renderer.swapChain().extent.width)
                        / static_cast<float>(renderer.swapChain().extent.height);
 
+        const Vector3 renderPos = toRenderSpace(position, camera.GetPosition());
+
         Matrix4x4 viewProj =
             camera.GetPerspective(aspect, 0.1f, 100.0f) *
                         camera.GetView();
         Matrix4x4 model =
-            translate(Vector3(position[0], position[1], position[2]))  *
+            translate(renderPos)  *
                         rotateZ(rotation[2]) *
                         rotateY(rotation[1]) *
                         rotateX(rotation[0]) *

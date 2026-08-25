@@ -22,9 +22,6 @@ namespace Caelus {
 
     Matrix4x4 Camera::GetView() const {
         return  ::rotateX(-m_pitch) *
-                ::rotateY(-m_yaw) *
-                ::translate(::Vector3(-m_position.x,
-                    -m_position.y,
-                    -m_position.z));
+                ::rotateY(-m_yaw);
     }
 }

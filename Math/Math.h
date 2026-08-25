@@ -139,6 +139,18 @@ namespace Caelus::Math {
         return r;
     }
 
+    struct WorldPos {
+        double x = 0, y = 0, z = 0;
+
+        WorldPos operator+(const WorldPos& w) const { return {.x = x + w.x, .y = y + w.y, .z = z + w.z}; }
+        WorldPos operator-(const WorldPos& w) const { return {.x = x - w.x, .y = y - w.y, .z = z - w.z}; }
+    };
+
+    inline Vector3 toRenderSpace(const WorldPos& p, const WorldPos& cameraPos) {
+        const WorldPos d = p - cameraPos;
+        return Vector3{.x = static_cast<float>(d.x), .y = static_cast<float>(d.y), .z = static_cast<float>(d.z)};
+    }
+
 } // Caelus::Math
 
 
