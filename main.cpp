@@ -156,7 +156,7 @@ int main() {
         vkCmdPushConstants(cmd, renderer.pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Caelus::Consts), &consts);
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline());
-        vkCmdDraw(cmd, 3, 1, 0, 0);
+        vkCmdDraw(cmd, 36, 1, 0, 0);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
 
