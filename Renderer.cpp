@@ -23,6 +23,64 @@ namespace Caelus {
         return shaderModule;
     }
 
+    static uint32_t findMemoryType(const VkPhysicalDevice &gpu, const uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+        VkPhysicalDeviceMemoryProperties memProperties;
+        vkGetPhysicalDeviceMemoryProperties(gpu, &memProperties);
+        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
+            if ((typeFilter & (1u << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
+                return i;
+        printf("Failed to find suitable memory type!\n");
+        return 0;
+    }
+
+    static bool createDepthBuffer(const VkPhysicalDevice &gpu, const VkDevice &device, SwapChain &swapChain) {
+        VkImageCreateInfo ci{};
+        ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        ci.imageType = VK_IMAGE_TYPE_2D;
+        ci.format = swapChain.depthFormat;
+        ci.extent = {.width = swapChain.extent.width, .height = swapChain.extent.height, .depth = 1};
+        ci.mipLevels = 1;
+        ci.arrayLayers = 1;
+        ci.samples = VK_SAMPLE_COUNT_1_BIT;
+        ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+        ci.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        if (vkCreateImage(device, &ci, nullptr, &swapChain.depthImage) != VK_SUCCESS) {
+            printf("Failed to create depth image!");
+            return false;
+        }
+
+        VkMemoryRequirements req;
+        vkGetImageMemoryRequirements(device, swapChain.depthImage, &req);
+
+        VkMemoryAllocateInfo ai{};
+        ai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        ai.allocationSize = req.size;
+        ai.memoryTypeIndex = findMemoryType(gpu, req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        if (vkAllocateMemory(device, &ai, nullptr, &swapChain.depthMemory) != VK_SUCCESS) {
+            printf("Failed to allocate depth memory!");
+            return false;
+        }
+
+        vkBindImageMemory(device, swapChain.depthImage, swapChain.depthMemory, 0);
+
+        VkImageViewCreateInfo ici{};
+        ici.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        ici.image = swapChain.depthImage;
+        ici.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        ici.format = swapChain.depthFormat;
+        ici.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1};
+
+        if (vkCreateImageView(device, &ici, nullptr, &swapChain.depthView) != VK_SUCCESS) {
+            printf("Failed to create depth view!");
+            return false;
+        }
+        printf("Successfully created depth buffer!");
+        return true;
+    }
+
     static bool createSwapChain(const VkPhysicalDevice &gpu, const VkSurfaceKHR &surface, const VkDevice &device, SwapChain &out) {
         //! GET INFORMATION ABOUT THE SWAPCHAIN
         // Get some information Idk
@@ -109,6 +167,8 @@ namespace Caelus {
             }
         }
         printf("Successfully created %u image views!\n", imgCount);
+
+        if (!createDepthBuffer(gpu, device, out)) return false;
 
         return true;
     }
@@ -338,6 +398,10 @@ namespace Caelus {
 
         vkDeviceWaitIdle(m_context.device);
 
+        vkDestroyImageView(m_context.device, m_swapChain.depthView, nullptr);
+        vkDestroyImage(m_context.device, m_swapChain.depthImage, nullptr);
+        vkFreeMemory(m_context.device, m_swapChain.depthMemory, nullptr);
+
         for (const auto v : m_swapChain.views)
             vkDestroyImageView(m_context.device, v, nullptr);
         vkDestroySwapchainKHR(m_context.device, m_swapChain.handle, nullptr);
@@ -547,6 +611,9 @@ namespace Caelus {
         vkDestroyFence(m_context.device, m_inFlight, nullptr);
 
         vkDestroyCommandPool(m_context.device, m_commandPool, nullptr); // frees `cmd` too
+        vkDestroyImageView(m_context.device, m_swapChain.depthView, nullptr);
+        vkDestroyImage(m_context.device, m_swapChain.depthImage, nullptr);
+        vkFreeMemory(m_context.device, m_swapChain.depthMemory, nullptr);
         for (const VkImageView v: m_swapChain.views)
             vkDestroyImageView(m_context.device, v, nullptr);
         vkDestroySwapchainKHR(m_context.device, m_swapChain.handle, nullptr);

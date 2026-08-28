@@ -32,6 +32,10 @@ namespace Caelus {
         VkExtent2D extent = {};
         std::vector<VkImage> images = {};
         std::vector<VkImageView> views = {};
+        VkImage depthImage = VK_NULL_HANDLE;
+        VkDeviceMemory depthMemory = VK_NULL_HANDLE;
+        VkImageView depthView = VK_NULL_HANDLE;
+        VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
     };
 
 
