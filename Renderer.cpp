@@ -359,10 +359,17 @@ namespace Caelus {
 
         vkCreatePipelineLayout(device, &layoutInfo, nullptr, &layout);
 
+        VkPipelineDepthStencilStateCreateInfo depthInfo{};
+        depthInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depthInfo.depthTestEnable = VK_TRUE;
+        depthInfo.depthWriteEnable = VK_TRUE;
+        depthInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+
         VkPipelineRenderingCreateInfo renderingInfo{};
         renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
         renderingInfo.colorAttachmentCount = 1;
         renderingInfo.pColorAttachmentFormats = &format;
+        renderingInfo.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT;
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -378,6 +385,7 @@ namespace Caelus {
         pipelineInfo.pDynamicState = &dynamicInfo;
         pipelineInfo.layout = layout;
         pipelineInfo.renderPass = VK_NULL_HANDLE;
+        pipelineInfo.pDepthStencilState = &depthInfo;
 
         if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
             printf("Failed to create graphics pipeline!\n");
@@ -500,10 +508,25 @@ namespace Caelus {
         barrier.image = m_swapChain.images[m_imageIndex];
         barrier.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1};
 
+        VkImageMemoryBarrier2 depthBarrier{};
+        depthBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+        depthBarrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+        depthBarrier.srcAccessMask = 0;
+        depthBarrier.dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+        depthBarrier.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        depthBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+        depthBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        depthBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        depthBarrier.image = m_swapChain.depthImage;
+        depthBarrier.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1};
+
+        const VkImageMemoryBarrier2 barriers[2] = { barrier, depthBarrier };
+
         VkDependencyInfo dependencyInfo{};
         dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
-        dependencyInfo.imageMemoryBarrierCount = 1;
-        dependencyInfo.pImageMemoryBarriers = &barrier;
+        dependencyInfo.imageMemoryBarrierCount = 2;
+        dependencyInfo.pImageMemoryBarriers = barriers;
 
         vkCmdPipelineBarrier2(m_cmd, &dependencyInfo);
 
@@ -515,12 +538,21 @@ namespace Caelus {
         colorAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         colorAttachmentInfo.clearValue.color = {clearColor[0],clearColor[1], clearColor[2],clearColor[3]};
 
+        VkRenderingAttachmentInfo depthAttachmentInfo{};
+        depthAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        depthAttachmentInfo.imageView = m_swapChain.depthView;
+        depthAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+        depthAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depthAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachmentInfo.clearValue.depthStencil = {.depth = 1.0f, .stencil = 0};
+
         VkRenderingInfo renderInfo{};
         renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
         renderInfo.renderArea = {.offset = {.x = 0,.y = 0}, .extent = m_swapChain.extent};
         renderInfo.layerCount = 1;
         renderInfo.colorAttachmentCount = 1;
         renderInfo.pColorAttachments = &colorAttachmentInfo;
+        renderInfo.pDepthAttachment = &depthAttachmentInfo;
 
         vkCmdBeginRendering(m_cmd, &renderInfo);
 
