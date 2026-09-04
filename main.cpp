@@ -88,6 +88,7 @@ int main() {
     Caelus::Camera camera{};
 
     float sensitivity = 0.005f;
+    float moveSpeed = 3.0f;
     double lastX, lastY;
     bool looking = false;
 
@@ -103,7 +104,8 @@ int main() {
         ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
 
         //! Has to after ImGui
-        double mouseX, mouseY, deltaX, deltaY;
+        double mouseX, mouseY;
+        Vector3 moveVector{.x = 0.0f, .y = 0.0f, .z = 0.0f};
 
         auto rmbDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
         if (rmbDown && !looking && !io.WantCaptureMouse) {
@@ -112,14 +114,41 @@ int main() {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
             lastX = mouseX; lastY = mouseY;
         } else if (rmbDown && looking && !io.WantCaptureMouse) {
+            double deltaY, deltaX;
             glfwGetCursorPos(window, &mouseX, &mouseY);
             deltaX = mouseX - lastX; deltaY = mouseY - lastY;
             lastX = mouseX; lastY = mouseY;
-            camera.LookAround(deltaY * sensitivity, -deltaX * sensitivity);
+            camera.LookAround(sensitivity * deltaY, sensitivity * -deltaX);
         } else if (!rmbDown && looking && !io.WantCaptureMouse) {
             looking = false;
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
+
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {moveVector.y += 1.0;}
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {moveVector.y -= 1.0;}
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {moveVector.x += 1.0;}
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {moveVector.x -= 1.0;}
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {moveVector.z += 1.0;}
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {moveVector.z -= 1.0;}
+        if (moveVector.x != 0.0f || moveVector.y != 0.0f || moveVector.z != 0.0f) {
+            moveVector = normalize(moveVector) * moveSpeed * io.DeltaTime;
+            Matrix4x4 v = camera.GetView();
+            Vector3 right = {v.m[0][0], v.m[1][0], v.m[2][0]};
+            Vector3 forward = { -v.m[0][2], -v.m[1][2], -v.m[2][2] };
+            Vector3 up = {0.0f, 1.0f, 0.0f};
+            right = right * moveVector.x;
+            forward = forward * moveVector.y;
+            up = up * moveVector.z;
+            moveVector = up + right + forward;
+
+            camera.GetPosition() = {
+                .x = camera.GetPosition().x + moveVector.x,
+                .y = camera.GetPosition().y + moveVector.y,
+                .z = camera.GetPosition().z + moveVector.z
+            };
+        }
+
+
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Renderer")) {
