@@ -16,6 +16,7 @@ namespace Caelus {
         [[nodiscard]] Math::WorldPos& GetPosition() {return m_position;} ;
         [[nodiscard]] float& GetPitch() {return m_pitch;} ;
         [[nodiscard]] float& GetYaw() {return m_yaw;} ;
+        void LookAround(float deltaX, float deltaY);
     private:
         Math::WorldPos m_position{};
         float m_pitch = 0, m_yaw = 0, m_fov = 1.0472f;

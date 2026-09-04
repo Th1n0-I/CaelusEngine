@@ -24,4 +24,9 @@ namespace Caelus {
         return  ::rotateX(-m_pitch) *
                 ::rotateY(-m_yaw);
     }
+
+    void Camera::LookAround(float deltaX, float deltaY) {
+        m_pitch += deltaX;
+        m_yaw += deltaY;
+    }
 }

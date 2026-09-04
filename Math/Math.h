@@ -17,7 +17,7 @@ namespace Caelus::Math {
         Vector4 operator*(const Vector4& b) const {return {.x = x * b.x, .y = y * b.y, .z = z * b.z, .w = w * b.w};}
         Vector4 operator/(const float& b) const {return {.x = x / b, .y = y / b, .z = z / b, .w = w / b};}
         Vector4 operator/(const Vector4& b) const {return{.x = x / b.x, .y = y / b.y, .z = z / b.z, .w = w / b.w};}
-        [[nodiscard]] float length() const {return x + y + z + w;}
+        [[nodiscard]] float length() const {return sqrtf(x + y + z + w);}
     };
 
     static Vector4 normalize(const Vector4& a) { return a / a.length(); }
@@ -35,7 +35,7 @@ namespace Caelus::Math {
         Vector3 operator*(const Vector3& b) const {return {.x = x * b.x, .y = y * b.y, .z = z * b.z};}
         Vector3 operator/(const float& b) const {return {.x = x / b, .y = y / b, .z = z / b};}
         Vector3 operator/(const Vector3& b) const {return{.x = x / b.x, .y = y / b.y, .z = z / b.z};}
-        [[nodiscard]] float length() const {return x + y + z;}
+        [[nodiscard]] float length() const {return sqrtf(x + y + z);}
     };
 
     static float dot (const Vector3& a, const Vector3& b) {

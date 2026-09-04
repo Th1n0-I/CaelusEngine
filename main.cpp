@@ -87,15 +87,39 @@ int main() {
 
     Caelus::Camera camera{};
 
-
+    float sensitivity = 0.005f;
+    double lastX, lastY;
+    bool looking = false;
 
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
+
+
+
 
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         ImGui::DockSpaceOverViewport(0, nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+
+        //! Has to after ImGui
+        double mouseX, mouseY, deltaX, deltaY;
+
+        auto rmbDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+        if (rmbDown && !looking && !io.WantCaptureMouse) {
+            glfwGetCursorPos(window, &mouseX, &mouseY);
+            looking = true;
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+            lastX = mouseX; lastY = mouseY;
+        } else if (rmbDown && looking && !io.WantCaptureMouse) {
+            glfwGetCursorPos(window, &mouseX, &mouseY);
+            deltaX = mouseX - lastX; deltaY = mouseY - lastY;
+            lastX = mouseX; lastY = mouseY;
+            camera.LookAround(deltaY * sensitivity, -deltaX * sensitivity);
+        } else if (!rmbDown && looking && !io.WantCaptureMouse) {
+            looking = false;
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
 
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Renderer")) {
@@ -119,6 +143,7 @@ int main() {
             ImGui::DragScalarN("Position", ImGuiDataType_Double, &camera.GetPosition().x, 3, 0.01f);
             ImGui::DragFloat("Pitch", &camera.GetPitch(), 0.01f);
             ImGui::DragFloat("Yaw", &camera.GetYaw(), 0.01f);
+            ImGui::DragFloat("Sensitivity", &sensitivity, 0.01f);
         }
         ImGui::Separator();
 
