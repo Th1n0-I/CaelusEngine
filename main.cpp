@@ -15,16 +15,18 @@
 
 using namespace Caelus::Math;
 
-static std::vector<char> readFile(const std::string &path) {
+static std::vector<char> readFile(const std::string& path)
+{
     // Get the file
     std::ifstream file(path, std::ios::ate | std::ios::binary);
-    if (!file.is_open()) {
+    if (!file.is_open())
+    {
         printf("Failed to open %s\n", path.c_str());
         return {};
     }
 
     // Get the size of the file
-    const size_t fileSize = (size_t) file.tellg();
+    const size_t fileSize = (size_t)file.tellg();
     std::vector<char> buffer(fileSize);
 
     // Return the file contents
@@ -33,8 +35,8 @@ static std::vector<char> readFile(const std::string &path) {
     return buffer;
 }
 
-int main() {
-
+int main()
+{
     glfwInit();
 
     // finds monitors and hooks to the os type shi
@@ -51,7 +53,7 @@ int main() {
     ImGui::CreateContext();
 
     // The input / output, you tell it what inputs ur doing and it tells you if those inputs are meant for ImGui
-    ImGuiIO &io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Lets windows snap to each other
     ImGui::StyleColorsDark(); // Dark mode cuz i don wanna get flashbanged
 
@@ -80,10 +82,10 @@ int main() {
     ImGui_ImplVulkan_Init(&initInfo);
     printf("Successfully initialized ImGui!\n");
 
-    float clearColor[4] = { 0.02f, 0.02f, 0.05f, 1.0f };
-    WorldPos position = { .x = 0.0f, .y = 0.0f, .z = -3.0f };
-    float rotation[3] = { 0.0f, 0.0f, 0.0f };
-    float scale[3] = { 1.0f, 1.0f, 1.0f };
+    float clearColor[4] = {0.02f, 0.02f, 0.05f, 1.0f};
+    WorldPos position = {.x = 0.0f, .y = 0.0f, .z = -3.0f};
+    float rotation[3] = {0.0f, 0.0f, 0.0f};
+    float scale[3] = {1.0f, 1.0f, 1.0f};
 
     Caelus::Camera camera{};
 
@@ -92,10 +94,32 @@ int main() {
     double lastX, lastY;
     bool looking = false;
 
-    while (!glfwWindowShouldClose(window)) {
+    const Vector3 corners[8] = {
+        {-0.5f, -0.5f, -0.5f}, {0.5f, -0.5f, -0.5f}, {0.5f, 0.5f, -0.5f}, {-0.5f, 0.5f, -0.5f},
+        {-0.5f, -0.5f, 0.5f}, {0.5f, -0.5f, 0.5f}, {0.5f, 0.5f, 0.5f}, {-0.5f, 0.5f, 0.5f}
+    };
+
+    const uint16_t indices[36] = {
+        0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 0, 3, 7, 0, 7, 4,
+        1, 5, 6, 1, 6, 2, 0, 4, 5, 0, 5, 1, 3, 2, 6, 3, 6, 7
+    };
+
+    std::vector<Caelus::Vertex> cubeVerts;
+    for (const Vector3& c : corners) cubeVerts.push_back({c});
+
+    Caelus::Buffer cubeVB = renderer.createBuffer(
+        cubeVerts.size() * sizeof(Caelus::Vertex),
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        cubeVerts.data());
+    
+    Caelus::Buffer cubeIB = renderer.createBuffer(
+        sizeof(indices),
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        indices);
+
+    while (!glfwWindowShouldClose(window))
+    {
         glfwPollEvents();
-
-
 
 
         ImGui_ImplVulkan_NewFrame();
@@ -108,33 +132,42 @@ int main() {
         Vector3 moveVector{.x = 0.0f, .y = 0.0f, .z = 0.0f};
 
         auto rmbDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-        if (rmbDown && !looking && !io.WantCaptureMouse) {
+        if (rmbDown && !looking && !io.WantCaptureMouse)
+        {
             glfwGetCursorPos(window, &mouseX, &mouseY);
             looking = true;
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-            lastX = mouseX; lastY = mouseY;
-        } else if (rmbDown && looking && !io.WantCaptureMouse) {
+            lastX = mouseX;
+            lastY = mouseY;
+        }
+        else if (rmbDown && looking && !io.WantCaptureMouse)
+        {
             double deltaY, deltaX;
             glfwGetCursorPos(window, &mouseX, &mouseY);
-            deltaX = mouseX - lastX; deltaY = mouseY - lastY;
-            lastX = mouseX; lastY = mouseY;
+            deltaX = mouseX - lastX;
+            deltaY = mouseY - lastY;
+            lastX = mouseX;
+            lastY = mouseY;
             camera.LookAround(sensitivity * deltaY, sensitivity * -deltaX);
-        } else if (!rmbDown && looking && !io.WantCaptureMouse) {
+        }
+        else if (!rmbDown && looking && !io.WantCaptureMouse)
+        {
             looking = false;
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
 
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {moveVector.y += 1.0;}
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {moveVector.y -= 1.0;}
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {moveVector.x += 1.0;}
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {moveVector.x -= 1.0;}
-        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {moveVector.z += 1.0;}
-        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {moveVector.z -= 1.0;}
-        if (moveVector.x != 0.0f || moveVector.y != 0.0f || moveVector.z != 0.0f) {
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) { moveVector.y += 1.0; }
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) { moveVector.y -= 1.0; }
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) { moveVector.x += 1.0; }
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) { moveVector.x -= 1.0; }
+        if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) { moveVector.z += 1.0; }
+        if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) { moveVector.z -= 1.0; }
+        if (moveVector.x != 0.0f || moveVector.y != 0.0f || moveVector.z != 0.0f)
+        {
             moveVector = normalize(moveVector) * moveSpeed * io.DeltaTime;
             Matrix4x4 v = camera.GetView();
             Vector3 right = {v.m[0][0], v.m[1][0], v.m[2][0]};
-            Vector3 forward = { -v.m[0][2], -v.m[1][2], -v.m[2][2] };
+            Vector3 forward = {-v.m[0][2], -v.m[1][2], -v.m[2][2]};
             Vector3 up = {0.0f, 1.0f, 0.0f};
             right = right * moveVector.x;
             forward = forward * moveVector.y;
@@ -149,10 +182,12 @@ int main() {
         }
 
 
-
-        if (ImGui::BeginMainMenuBar()) {
-            if (ImGui::BeginMenu("Renderer")) {
-                if (ImGui::BeginMenu("Clear Color")) {
+        if (ImGui::BeginMainMenuBar())
+        {
+            if (ImGui::BeginMenu("Renderer"))
+            {
+                if (ImGui::BeginMenu("Clear Color"))
+                {
                     ImGui::ColorPicker3("Clear Color", &clearColor[0]);
                     ImGui::EndMenu();
                 }
@@ -163,12 +198,14 @@ int main() {
 
         ImGui::Begin("Caelus");
         ImGui::Text("%.1f FPS", io.Framerate);
-        if (ImGui::CollapsingHeader("Triangle")){
+        if (ImGui::CollapsingHeader("Triangle"))
+        {
             ImGui::DragScalarN("Position", ImGuiDataType_Double, &position.x, 3, 0.01f);
             ImGui::DragFloat3("Rotation", &rotation[0], 0.01f);
             ImGui::DragFloat3("Scale", &scale[0], 0.01f);
         }
-        if (ImGui::CollapsingHeader("Camera")) {
+        if (ImGui::CollapsingHeader("Camera"))
+        {
             ImGui::DragScalarN("Position", ImGuiDataType_Double, &camera.GetPosition().x, 3, 0.01f);
             ImGui::DragFloat("Pitch", &camera.GetPitch(), 0.01f);
             ImGui::DragFloat("Yaw", &camera.GetYaw(), 0.01f);
@@ -181,19 +218,19 @@ int main() {
         ImGui::Render();
 
         const float aspect = static_cast<float>(renderer.swapChain().extent.width)
-                       / static_cast<float>(renderer.swapChain().extent.height);
+            / static_cast<float>(renderer.swapChain().extent.height);
 
         const Vector3 renderPos = toRenderSpace(position, camera.GetPosition());
 
         Matrix4x4 viewProj =
             camera.GetPerspective(aspect, 0.1f, 100.0f) *
-                        camera.GetView();
+            camera.GetView();
         Matrix4x4 model =
-            translate(renderPos)  *
-                        rotateZ(rotation[2]) *
-                        rotateY(rotation[1]) *
-                        rotateX(rotation[0]) *
-                        ::scale(Vector3(scale[0], scale[1], scale[2]));
+            translate(renderPos) *
+            rotateZ(rotation[2]) *
+            rotateY(rotation[1]) *
+            rotateX(rotation[0]) *
+            ::scale(Vector3(scale[0], scale[1], scale[2]));
         auto matrix = viewProj * model;
 
 
@@ -208,10 +245,14 @@ int main() {
             for (int j = 0; j < 4; j++)
                 consts.matrix[i][j] = matrix.m[i][j];
 
-        vkCmdPushConstants(cmd, renderer.pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Caelus::Consts), &consts);
+        vkCmdPushConstants(cmd, renderer.pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Caelus::Consts),
+                           &consts);
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline());
-        vkCmdDraw(cmd, 36, 1, 0, 0);
+        VkDeviceSize offset = 0;
+        vkCmdBindVertexBuffers(cmd, 0, 1, &cubeVB.handle, &offset);
+        vkCmdBindIndexBuffer(cmd, cubeIB.handle, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdDrawIndexed(cmd, cubeIB.size, 1, 0, 0, 0);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
 
@@ -221,6 +262,8 @@ int main() {
     vkDeviceWaitIdle(renderer.context().device);
 
     // Clean everything up
+
+    renderer.destroyBuffer(cubeVB);
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();

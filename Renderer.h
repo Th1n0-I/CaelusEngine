@@ -7,7 +7,10 @@
 
 #include <vulkan/vulkan.h>
 #include "GLFW/glfw3.h"
+#include "math.h"
 #include <vector>
+
+#include "Math/Math.h"
 
 namespace Caelus {
     struct Consts
@@ -16,7 +19,21 @@ namespace Caelus {
         float pad_[2];
         float matrix[4][4];
     };
-
+    
+    struct Vertex
+    {
+        Math::Vector3 position;
+    };
+    static_assert(sizeof(Vertex) == 12, "Vertex must be tightly packed for the vertex input layout");
+    
+    //? GPU buffer plus memory.
+    struct Buffer
+    {
+        VkBuffer handle = VK_NULL_HANDLE;
+        VkDeviceMemory memory = VK_NULL_HANDLE;
+        VkDeviceSize size = 0;
+    };
+    
     struct VulkanContext {
         VkInstance instance = VK_NULL_HANDLE;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -63,6 +80,9 @@ namespace Caelus {
         void endFrame();
 
         void resizeSwapChain(GLFWwindow* window);
+        
+        Buffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, const void* data);
+        void destroyBuffer(Buffer& buffer);
 
     private:
         GLFWwindow* m_window = nullptr;

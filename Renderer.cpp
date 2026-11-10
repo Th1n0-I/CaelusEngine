@@ -4,7 +4,10 @@
 
 #include "Renderer.h"
 
+
 #include <cstdio>
+#include <string>
+#include <cstddef>
 
 
 
@@ -308,9 +311,24 @@ namespace Caelus {
         stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         stages[1].module = fragModule;
         stages[1].pName = "main";
+        
+        VkVertexInputBindingDescription binding{};
+        binding.binding = 0;
+        binding.stride = sizeof(Vertex);
+        binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+        
+        VkVertexInputAttributeDescription posAttr{};
+        posAttr.location = 0;
+        posAttr.binding = 0;
+        posAttr.format = VK_FORMAT_R32G32B32_SFLOAT;
+        posAttr.offset = offsetof(Vertex, position);
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        vertexInputInfo.vertexBindingDescriptionCount = 1;
+        vertexInputInfo.pVertexBindingDescriptions = &binding;
+        vertexInputInfo.vertexAttributeDescriptionCount = 1;
+        vertexInputInfo.pVertexAttributeDescriptions = &posAttr;
 
         VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
         inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -416,6 +434,51 @@ namespace Caelus {
 
         if (!createSwapChain(m_context.gpu, m_context.surface, m_context.device, m_swapChain)) {printf("Failed to resize swapChain!\n"); return;}
         printf("Successfully resized swapChain!\n");
+    }
+
+    Buffer Renderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, const void* data)
+    {
+        Buffer b{};
+        b.size = size;
+        
+        VkBufferCreateInfo ci{};
+        ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        ci.size = size;
+        ci.usage = usage;
+        ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        if (vkCreateBuffer(m_context.device, &ci, nullptr, &b.handle) != VK_SUCCESS)
+        {
+            printf("Failed to create buffer!\n");
+            return {};
+        }
+        
+        VkMemoryRequirements req;
+        vkGetBufferMemoryRequirements(m_context.device, b.handle, &req);
+        
+        VkMemoryAllocateInfo ai{};
+        ai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        ai.allocationSize = req.size;
+        ai.memoryTypeIndex = findMemoryType(m_context.gpu, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        if (vkAllocateMemory(m_context.device, &ai, nullptr, &b.memory) != VK_SUCCESS)
+        {
+            printf("Failed to allocate buffer memory!");
+            return {};
+        }
+        vkBindBufferMemory(m_context.device, b.handle, b.memory, 0);
+        
+        void* mapped = nullptr;
+        vkMapMemory(m_context.device, b.memory, 0, b.size, 0, &mapped);
+        memcpy(mapped, data, static_cast<size_t>(size));
+        vkUnmapMemory(m_context.device, b.memory);
+        
+        return b;
+    }
+
+    void Renderer::destroyBuffer(Buffer& buffer)
+    {
+        vkDestroyBuffer(m_context.device, buffer.handle, nullptr);
+        vkFreeMemory(m_context.device, buffer.memory, nullptr);
+        buffer = {};
     }
 
     Renderer::Renderer(GLFWwindow *window, std::vector<char> vertCode, std::vector<char> fragCode) : m_window(window) {
