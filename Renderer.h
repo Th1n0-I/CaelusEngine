@@ -7,12 +7,15 @@
 
 #include <vulkan/vulkan.h>
 #include "GLFW/glfw3.h"
-#include "math.h"
 #include <vector>
 
+#include "Buffer.h"
+#include "SwapChain.h"
+#include "VulkanContext.h"
 #include "Math/Math.h"
 
 namespace Caelus {
+
     struct Consts
     {
         int res[2];
@@ -25,36 +28,6 @@ namespace Caelus {
         Math::Vector3 position;
     };
     static_assert(sizeof(Vertex) == 12, "Vertex must be tightly packed for the vertex input layout");
-    
-    //? GPU buffer plus memory.
-    struct Buffer
-    {
-        VkBuffer handle = VK_NULL_HANDLE;
-        VkDeviceMemory memory = VK_NULL_HANDLE;
-        VkDeviceSize size = 0;
-    };
-    
-    struct VulkanContext {
-        VkInstance instance = VK_NULL_HANDLE;
-        VkSurfaceKHR surface = VK_NULL_HANDLE;
-        VkPhysicalDevice gpu = VK_NULL_HANDLE;
-        VkDevice device = VK_NULL_HANDLE;
-        VkQueue graphicsQueue = VK_NULL_HANDLE;
-        uint32_t queueFamilyIndex = UINT32_MAX;
-    };
-
-    struct SwapChain {
-        VkSwapchainKHR handle = VK_NULL_HANDLE;
-        VkFormat format = VK_FORMAT_UNDEFINED;
-        VkExtent2D extent = {};
-        std::vector<VkImage> images = {};
-        std::vector<VkImageView> views = {};
-        VkImage depthImage = VK_NULL_HANDLE;
-        VkDeviceMemory depthMemory = VK_NULL_HANDLE;
-        VkImageView depthView = VK_NULL_HANDLE;
-        VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
-    };
-
 
     class Renderer {
     public:
