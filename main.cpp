@@ -252,7 +252,7 @@ int main()
         VkDeviceSize offset = 0;
         vkCmdBindVertexBuffers(cmd, 0, 1, &cubeVB.handle, &offset);
         vkCmdBindIndexBuffer(cmd, cubeIB.handle, 0, VK_INDEX_TYPE_UINT16);
-        vkCmdDrawIndexed(cmd, cubeIB.size, 1, 0, 0, 0);
+        vkCmdDrawIndexed(cmd, static_cast<uint32_t>(cubeIB.size / sizeof(uint16_t)), 1, 0, 0, 0);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
 
@@ -264,6 +264,7 @@ int main()
     // Clean everything up
 
     renderer.destroyBuffer(cubeVB);
+    renderer.destroyBuffer(cubeIB);
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();

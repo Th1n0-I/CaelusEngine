@@ -100,6 +100,9 @@ namespace Caelus {
         VkPipeline m_pipeline = VK_NULL_HANDLE;
 
         uint32_t m_imageIndex = 0;
+        
+        VkCommandBuffer beginOneTimeCommand();
+        void endOneTimeCommand(VkCommandBuffer commandBuffer);
     };
 } // Caelus
 

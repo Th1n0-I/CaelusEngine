@@ -35,6 +35,41 @@ namespace Caelus {
         printf("Failed to find suitable memory type!\n");
         return 0;
     }
+    
+    static bool allocateBuffer(const VulkanContext& ctx, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags props, Buffer& out)
+    {
+        out = {};
+        out.size = size;
+        
+        VkBufferCreateInfo ci{};
+        ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        ci.size = size;
+        ci.usage = usage;
+        ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        if (vkCreateBuffer(ctx.device , &ci, nullptr, &out.handle) != VK_SUCCESS)
+        {
+            printf("Failed to create buffer!");
+            return false;
+        }
+        
+        VkMemoryRequirements req;
+        vkGetBufferMemoryRequirements(ctx.device, out.handle, &req);
+        
+        VkMemoryAllocateInfo ai{};
+        ai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        ai.allocationSize = req.size;
+        ai.memoryTypeIndex = findMemoryType(ctx.gpu, req.memoryTypeBits, props);
+        if (vkAllocateMemory(ctx.device, &ai, nullptr, &out.memory) != VK_SUCCESS)
+        {
+            printf("Failed to allocate memory!");
+            vkDestroyBuffer(ctx.device, out.handle, nullptr);
+            out = {};
+            return false;
+        }
+        
+        vkBindBufferMemory(ctx.device, out.handle, out.memory, 0);
+        return true;
+    }
 
     static bool createDepthBuffer(const VkPhysicalDevice &gpu, const VkDevice &device, SwapChain &swapChain) {
         VkImageCreateInfo ci{};
@@ -438,39 +473,52 @@ namespace Caelus {
 
     Buffer Renderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, const void* data)
     {
-        Buffer b{};
-        b.size = size;
-        
-        VkBufferCreateInfo ci{};
-        ci.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        ci.size = size;
-        ci.usage = usage;
-        ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        if (vkCreateBuffer(m_context.device, &ci, nullptr, &b.handle) != VK_SUCCESS)
+        Buffer staging{};
+        if (!allocateBuffer(m_context, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, staging))
         {
-            printf("Failed to create buffer!\n");
+            printf("Failed to allocate buffer!\n"); 
             return {};
         }
-        
-        VkMemoryRequirements req;
-        vkGetBufferMemoryRequirements(m_context.device, b.handle, &req);
-        
-        VkMemoryAllocateInfo ai{};
-        ai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        ai.allocationSize = req.size;
-        ai.memoryTypeIndex = findMemoryType(m_context.gpu, req.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        if (vkAllocateMemory(m_context.device, &ai, nullptr, &b.memory) != VK_SUCCESS)
-        {
-            printf("Failed to allocate buffer memory!");
-            return {};
-        }
-        vkBindBufferMemory(m_context.device, b.handle, b.memory, 0);
         
         void* mapped = nullptr;
-        vkMapMemory(m_context.device, b.memory, 0, b.size, 0, &mapped);
+        vkMapMemory(m_context.device, staging.memory, 0, size, 0, &mapped);
         memcpy(mapped, data, static_cast<size_t>(size));
-        vkUnmapMemory(m_context.device, b.memory);
+        vkUnmapMemory(m_context.device, staging.memory);
         
+        Buffer b;
+        if (!allocateBuffer(m_context, size, usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, b))
+        {
+            destroyBuffer(staging);
+            printf("Failed to allocate buffer!\n");
+            return {};
+        }
+        
+        VkCommandBuffer cmd = beginOneTimeCommand();
+        
+        VkBufferCopy region{.srcOffset = 0, .dstOffset = 0, .size = size};
+        vkCmdCopyBuffer(cmd, staging.handle, b.handle, 1, &region);
+        
+        VkBufferMemoryBarrier2 barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
+        barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        barrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+        barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.buffer = b.handle;
+        barrier.offset = 0;
+        barrier.size = VK_WHOLE_SIZE;
+        
+        VkDependencyInfo dep{};
+        dep.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+        dep.bufferMemoryBarrierCount = 1;
+        dep.pBufferMemoryBarriers = &barrier;
+        vkCmdPipelineBarrier2(cmd, &dep);
+        
+        endOneTimeCommand(cmd);
+        
+        destroyBuffer(staging);
         return b;
     }
 
@@ -479,6 +527,43 @@ namespace Caelus {
         vkDestroyBuffer(m_context.device, buffer.handle, nullptr);
         vkFreeMemory(m_context.device, buffer.memory, nullptr);
         buffer = {};
+    }
+    
+    VkCommandBuffer Renderer::beginOneTimeCommand()
+    {
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.commandPool = m_commandPool;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandBufferCount = 1;
+        
+        VkCommandBuffer cmd;
+        vkAllocateCommandBuffers(m_context.device, &allocInfo, &cmd);
+        
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        vkBeginCommandBuffer(cmd, &beginInfo);
+        return cmd;
+    }
+
+    void Renderer::endOneTimeCommand(VkCommandBuffer commandBuffer)
+    {
+        vkEndCommandBuffer(commandBuffer);
+        
+        VkCommandBufferSubmitInfo cbInfo{};
+        cbInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+        cbInfo.commandBuffer = commandBuffer;
+        
+        VkSubmitInfo2 submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+        submitInfo.commandBufferInfoCount = 1;
+        submitInfo.pCommandBufferInfos = &cbInfo;
+        
+        vkQueueSubmit2(m_context.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(m_context.graphicsQueue);
+        
+        vkFreeCommandBuffers(m_context.device, m_commandPool, 1, &commandBuffer);
     }
 
     Renderer::Renderer(GLFWwindow *window, std::vector<char> vertCode, std::vector<char> fragCode) : m_window(window) {
