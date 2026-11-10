@@ -14,8 +14,9 @@ namespace Caelus {
 
         r.m[0][0] = f / aspect;
         r.m[1][1] = -f;
-        r.m[2][2] = farZ / (nearZ - farZ);
-        r.m[3][2] = (farZ * nearZ) / (nearZ - farZ);
+        //? Maps near to 1 and far to 0.
+        r.m[2][2] = 0.0f;
+        r.m[3][2] = nearZ;
         r.m[2][3] = -1.0f;
         return r;
     }

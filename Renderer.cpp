@@ -363,7 +363,7 @@ namespace Caelus {
         depthInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
         depthInfo.depthTestEnable = VK_TRUE;
         depthInfo.depthWriteEnable = VK_TRUE;
-        depthInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+        depthInfo.depthCompareOp = VK_COMPARE_OP_GREATER; //? Reverse-z, higher value is closer.
 
         VkPipelineRenderingCreateInfo renderingInfo{};
         renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -544,7 +544,7 @@ namespace Caelus {
         depthAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
         depthAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         depthAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachmentInfo.clearValue.depthStencil = {.depth = 1.0f, .stencil = 0};
+        depthAttachmentInfo.clearValue.depthStencil = {.depth = 0.0f, .stencil = 0}; //? Clear to 0 since reverse z uses 0 as furthest away.
 
         VkRenderingInfo renderInfo{};
         renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
