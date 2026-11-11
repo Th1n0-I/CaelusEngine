@@ -9,6 +9,13 @@
 
 namespace Caelus
 {
+    struct Consts
+    {
+        int res[2];
+        float pad_[2];
+        float matrix[4][4];
+    };
+    
     VkShaderModule createShaderModule(const VkDevice &device, const std::vector<char> &code);
     bool createPipeline(const VkShaderModule& vertModule, const VkShaderModule& fragModule, const VkDevice& device, const VkFormat format, VkPipelineLayout& layout, VkPipeline& pipeline, VkPushConstantRange& range);
 } // Caelus

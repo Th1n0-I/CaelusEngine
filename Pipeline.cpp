@@ -10,6 +10,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "Renderer.h"
+#include "Vertex.h"
 
 namespace Caelus
 {

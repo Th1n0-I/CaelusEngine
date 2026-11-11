@@ -15,20 +15,6 @@
 #include "Math/Math.h"
 
 namespace Caelus {
-
-    struct Consts
-    {
-        int res[2];
-        float pad_[2];
-        float matrix[4][4];
-    };
-    
-    struct Vertex
-    {
-        Math::Vector3 position;
-    };
-    static_assert(sizeof(Vertex) == 12, "Vertex must be tightly packed for the vertex input layout");
-
     class Renderer {
     public:
         explicit Renderer(GLFWwindow* window, std::vector<char> vertCode, std::vector<char> fragCode);

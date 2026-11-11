@@ -10,7 +10,9 @@
 #include <imgui_impl_vulkan.h>
 
 #include "Camera.h"
+#include "Pipeline.h"
 #include "Renderer.h"
+#include "Vertex.h"
 #include "Math/Math.h"
 
 using namespace Caelus::Math;
