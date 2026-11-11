@@ -129,6 +129,30 @@ namespace Caelus {
         
         vkFreeCommandBuffers(m_context.device, m_commandPool, 1, &commandBuffer);
     }
+    
+    Mesh Renderer::createMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
+    {
+        Mesh m;
+        m.vertexBuffer = createBuffer(vertices.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vertices.data());
+        m.indexBuffer = createBuffer(indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, indices.data());
+        m.indexCount = static_cast<uint32_t>(indices.size());
+        return m;
+    }
+    
+    void Renderer::destroyMesh(Mesh& m)
+    {
+        destroyBuffer(m.vertexBuffer);
+        destroyBuffer(m.indexBuffer);
+        m = {};
+    }
+
+    void Renderer::drawMesh(VkCommandBuffer commandBuffer, Mesh& mesh)
+    {
+        VkDeviceSize offset = 0;
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer.handle, &offset);
+        vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0,0);
+    }
 
     Renderer::Renderer(GLFWwindow *window, std::vector<char> vertCode, std::vector<char> fragCode) : m_window(window) {
         VulkanContext context;

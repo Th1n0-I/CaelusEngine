@@ -14,6 +14,7 @@
 #include "Renderer.h"
 #include "Vertex.h"
 #include "Math/Math.h"
+#include "Mesh.h"
 
 using namespace Caelus::Math;
 
@@ -101,7 +102,7 @@ int main()
         {-0.5f, -0.5f, 0.5f}, {0.5f, -0.5f, 0.5f}, {0.5f, 0.5f, 0.5f}, {-0.5f, 0.5f, 0.5f}
     };
 
-    const uint16_t indices[36] = {
+    const uint32_t indices[36] = {
         0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 0, 3, 7, 0, 7, 4,
         1, 5, 6, 1, 6, 2, 0, 4, 5, 0, 5, 1, 3, 2, 6, 3, 6, 7
     };
@@ -109,15 +110,10 @@ int main()
     std::vector<Caelus::Vertex> cubeVerts;
     for (const Vector3& c : corners) cubeVerts.push_back({c});
 
-    Caelus::Buffer cubeVB = renderer.createBuffer(
-        cubeVerts.size() * sizeof(Caelus::Vertex),
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        cubeVerts.data());
+    std::vector<uint32_t> cubeIndices;
+    for (const uint32_t i : indices) cubeIndices.push_back(i);
     
-    Caelus::Buffer cubeIB = renderer.createBuffer(
-        sizeof(indices),
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        indices);
+    Caelus::Mesh cubeMesh = renderer.createMesh(cubeVerts, cubeIndices);
 
     while (!glfwWindowShouldClose(window))
     {
@@ -252,9 +248,7 @@ int main()
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline());
         VkDeviceSize offset = 0;
-        vkCmdBindVertexBuffers(cmd, 0, 1, &cubeVB.handle, &offset);
-        vkCmdBindIndexBuffer(cmd, cubeIB.handle, 0, VK_INDEX_TYPE_UINT16);
-        vkCmdDrawIndexed(cmd, static_cast<uint32_t>(cubeIB.size / sizeof(uint16_t)), 1, 0, 0, 0);
+        Caelus::Renderer::drawMesh(renderer.commandBuffer(), cubeMesh);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
 
@@ -265,8 +259,7 @@ int main()
 
     // Clean everything up
 
-    renderer.destroyBuffer(cubeVB);
-    renderer.destroyBuffer(cubeIB);
+    renderer.destroyMesh(cubeMesh);
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();

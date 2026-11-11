@@ -13,6 +13,8 @@
 #include "SwapChain.h"
 #include "VulkanContext.h"
 #include "Math/Math.h"
+#include "Vertex.h"
+#include "Mesh.h"
 
 namespace Caelus {
     class Renderer {
@@ -42,6 +44,10 @@ namespace Caelus {
         
         Buffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, const void* data);
         void destroyBuffer(Buffer& buffer);
+        
+        Mesh createMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
+        void destroyMesh(Mesh& mesh);
+        static void drawMesh(VkCommandBuffer commandBuffer, Mesh& mesh);
 
     private:
         GLFWwindow* m_window = nullptr;
