@@ -97,7 +97,7 @@ int main()
     double lastX, lastY;
     bool looking = false;
 
-    const int cubeRes = 16;
+    const int cubeRes = 8;
     const int R = cubeRes + 1;
 
     std::vector<Caelus::Vertex> cubeVerts;

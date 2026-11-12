@@ -12,5 +12,5 @@ layout(push_constant) uniform Consts{
 
 void main(){
     gl_Position = pc.matrix * vec4(inPosition, 1.0);
-    fragColor = inPosition + 0.5;
+    fragColor = inPosition;
 }
