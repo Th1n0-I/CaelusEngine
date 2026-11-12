@@ -2,7 +2,7 @@
 
 layout(location = 0) in vec3 inPosition;
 
-layout(location = 0) out vec3 fragColor;
+layout(location = 0) out vec3 fragNormal;
 
 layout(push_constant) uniform Consts{
     int res[2];
@@ -12,5 +12,5 @@ layout(push_constant) uniform Consts{
 
 void main(){
     gl_Position = pc.matrix * vec4(inPosition, 1.0);
-    fragColor = inPosition;
+    fragNormal = inPosition;
 }

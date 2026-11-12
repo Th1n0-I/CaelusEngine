@@ -15,6 +15,7 @@
 #include "Vertex.h"
 #include "Math/Math.h"
 #include "Mesh.h"
+#include "Primitives.h"
 
 using namespace Caelus::Math;
 
@@ -97,61 +98,9 @@ int main()
     double lastX, lastY;
     bool looking = false;
 
-    const int cubeRes = 8;
-    const int R = cubeRes + 1;
+    Caelus::MeshData sphereMeshData = Caelus::createCubeSphere(16);
 
-    std::vector<Caelus::Vertex> cubeVerts;
-    std::vector<int> indexSpots(R * R * R, -1);
-
-    for (int x = 0; x <= cubeRes; x++)
-    {
-        float posX = static_cast<float>(x) / static_cast<float>(cubeRes) - 0.5f;
-        bool xOnEdge = x == 0 || x == cubeRes;
-        for (int y = 0; y <= cubeRes; y++)
-        {
-            float posY = static_cast<float>(y) / static_cast<float>(cubeRes) - 0.5f;
-            bool yOnEdge = y == 0 || y == cubeRes;
-            for (int z = 0; z <= cubeRes; z++)
-            {
-                float posZ = static_cast<float>(z) / static_cast<float>(cubeRes) - 0.5f;
-                bool zOnEdge = z == 0 || z == cubeRes;
-                if (!xOnEdge && !yOnEdge && !zOnEdge) continue;
-                int mapIndex = (x * R + y) * R + z;
-                indexSpots[mapIndex] = cubeVerts.size();
-                cubeVerts.push_back({normalize(Vector3{posX, posY, posZ})});
-            }
-        }
-    }
-
-    std::vector<uint32_t> cubeIndices;
-    cubeIndices.reserve(36 * cubeRes * cubeRes);
-
-    auto vert = [&](int x, int y, int z)
-    {
-        return static_cast<uint32_t>(indexSpots[( x * R + y ) * R + z]);
-    };
-
-    auto addQuad = [&](uint32_t a, uint32_t b, uint32_t c, uint32_t d, bool flip)
-    {
-        if (!flip) cubeIndices.insert(cubeIndices.end(), {a, b ,c , a, c,d});
-        else cubeIndices.insert(cubeIndices.end(), {a,c,b,a,d,c});
-    };
-
-    for (int i = 0; i < cubeRes; i++)
-    {
-        for (int j = 0; j < cubeRes; j++)
-        {
-            for (int side = 0; side <= cubeRes; side += cubeRes)
-            {
-                bool flip = (side == cubeRes);
-                addQuad(vert(side, i, j), vert(side, i + 1, j), vert(side, i + 1, j + 1), vert(side, i, j + 1), flip);
-                addQuad(vert(j, side, i), vert(j, side, i + 1), vert(j + 1, side, i + 1), vert(j + 1, side, i), flip);
-                addQuad(vert(i, j, side), vert(i + 1, j, side), vert(i + 1, j + 1, side), vert(i, j + 1, side), flip);
-            }
-        }
-    }
-
-    Caelus::Mesh cubeMesh = renderer.createMesh(cubeVerts, cubeIndices);
+    Caelus::Mesh cubeMesh = renderer.createMesh(sphereMeshData.Vertices, sphereMeshData.Indices);
 
     while (!glfwWindowShouldClose(window))
     {

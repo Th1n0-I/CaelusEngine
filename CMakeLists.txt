@@ -41,7 +41,9 @@ add_executable(CaelusEngine main.cpp
         Pipeline.cpp
         Pipeline.h
         Vertex.h
-        Mesh.h)
+        Mesh.h
+        Primitives.cpp
+        Primitives.h)
 target_link_libraries(CaelusEngine PRIVATE glfw Vulkan::Vulkan imgui)
 
 find_program(GLSLC glslc HINTS "$ENV{VULKAN_SDK}/Bin")
