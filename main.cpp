@@ -9,6 +9,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 
+#include "Body.h"
 #include "Camera.h"
 #include "Pipeline.h"
 #include "Renderer.h"
@@ -101,6 +102,27 @@ int main()
     Caelus::MeshData sphereMeshData = Caelus::createCubeSphere(16);
 
     Caelus::Mesh cubeMesh = renderer.createMesh(sphereMeshData.Vertices, sphereMeshData.Indices);
+    
+    Caelus::Body sun;
+    sun.name = "Sun";
+    sun.localPosition = WorldPos(0, 0, 0);
+    sun.parent = Caelus::Body::noParent;
+    sun.radius = 2;
+    sun.emissive = true;
+    
+    Caelus::Body earth;
+    earth.name = "Earth";
+    earth.localPosition = WorldPos(10, 0, 0);
+    earth.parent = 0;
+    earth.radius = 1;
+    
+    Caelus::Body moon;
+    moon.name = "Moon";
+    moon.localPosition = WorldPos(3, 0, 0);
+    moon.parent = 1;
+    moon.radius = 0.27f;
+    
+    std::vector bodies {sun, earth, moon};
 
     while (!glfwWindowShouldClose(window))
     {
@@ -183,12 +205,18 @@ int main()
 
         ImGui::Begin("Caelus");
         ImGui::Text("%.1f FPS", io.Framerate);
-        if (ImGui::CollapsingHeader("Triangle"))
+        
+        for (int i = 0; i < bodies.size(); i++)
         {
-            ImGui::DragScalarN("Position", ImGuiDataType_Double, &position.x, 3, 0.01f);
-            ImGui::DragFloat3("Rotation", &rotation[0], 0.01f);
-            ImGui::DragFloat3("Scale", &scale[0], 0.01f);
+            ImGui::PushID(i);
+            if (ImGui::CollapsingHeader(bodies[i].name.c_str()))
+            {
+                ImGui::DragScalarN(bodies[i].name.c_str(), ImGuiDataType_Double, &bodies[i].localPosition.x, 3, 0.01f);
+                ImGui::DragFloat("Scale", &bodies[i].radius, 0.01f);
+            }
+            ImGui::PopID();
         }
+        
         if (ImGui::CollapsingHeader("Camera"))
         {
             ImGui::DragScalarN("Position", ImGuiDataType_Double, &camera.GetPosition().x, 3, 0.01f);
@@ -201,41 +229,51 @@ int main()
         ImGui::End();
 
         ImGui::Render();
+        
+        for (Caelus::Body& body : bodies)
+        {
+            if (body.parent == Caelus::Body::noParent) body.worldPosition = body.localPosition;
+            else body.worldPosition = bodies[body.parent].worldPosition + body.localPosition;
+        }
+        
 
         const float aspect = static_cast<float>(renderer.swapChain().extent.width)
             / static_cast<float>(renderer.swapChain().extent.height);
 
-        const Vector3 renderPos = toRenderSpace(position, camera.GetPosition());
-
-        Matrix4x4 viewProj =
-            camera.GetPerspective(aspect, 0.1f, 100.0f) *
-            camera.GetView();
-        Matrix4x4 model =
-            translate(renderPos) *
-            rotateZ(rotation[2]) *
-            rotateY(rotation[1]) *
-            rotateX(rotation[0]) *
-            ::scale(Vector3(scale[0], scale[1], scale[2]));
-        auto matrix = viewProj * model;
-
-
+        Matrix4x4 viewProj = camera.GetPerspective(aspect, 0.1f, 100.0f) * camera.GetView();
+        
         VkCommandBuffer cmd = renderer.beginFrame(clearColor);
         if (cmd == VK_NULL_HANDLE) continue;
-
+        
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline());
+        
         Caelus::Consts consts{};
         consts.res[0] = static_cast<int>(renderer.swapChain().extent.width);
         consts.res[1] = static_cast<int>(renderer.swapChain().extent.height);
-
-        for (int i = 0; i < 4; i++)
-            for (int j = 0; j < 4; j++)
-                consts.matrix[i][j] = matrix.m[i][j];
-
-        vkCmdPushConstants(cmd, renderer.pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Caelus::Consts),
-                           &consts);
-
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline());
-        VkDeviceSize offset = 0;
-        Caelus::Renderer::drawMesh(renderer.commandBuffer(), cubeMesh);
+        
+        const Vector3 sunRenderPos = toRenderSpace(bodies[0].worldPosition, camera.GetPosition());
+        
+        for (const Caelus::Body& body : bodies)
+        {
+            const Vector3 renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
+            const float r = body.radius;
+            
+            Matrix4x4 model = translate(renderPos) * ::scale(Vector3(r, r, r));
+            Matrix4x4 matrix = viewProj * model;
+            
+            for (int i = 0; i < 4; i++)
+                for (int j = 0; j < 4; j++)
+                    consts.matrix[i][j] = matrix.m[i][j];
+            
+            consts.bodyPosRadius = {renderPos.x, renderPos.y, renderPos.z, body.radius};
+            
+            const float emissive = body.emissive ? 1 : 0;
+            consts.sunPosEmissive = {sunRenderPos.x, sunRenderPos.y, sunRenderPos.z, emissive};
+            
+            vkCmdPushConstants(cmd, renderer.pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Caelus::Consts), &consts);
+            Caelus::Renderer::drawMesh(cmd, cubeMesh);
+        }
+        
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
 

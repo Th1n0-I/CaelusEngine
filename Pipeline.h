@@ -7,6 +7,8 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+#include "Math/Math.h"
+
 namespace Caelus
 {
     struct Consts
@@ -14,6 +16,8 @@ namespace Caelus
         int res[2];
         float pad_[2];
         float matrix[4][4];
+        Math::Vector4 bodyPosRadius;
+        Math::Vector4 sunPosEmissive;
     };
     
     VkShaderModule createShaderModule(const VkDevice &device, const std::vector<char> &code);
