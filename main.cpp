@@ -88,9 +88,6 @@ int main()
     printf("Successfully initialized ImGui!\n");
 
     float clearColor[4] = {0.02f, 0.02f, 0.05f, 1.0f};
-    WorldPos position = {.x = 0.0f, .y = 0.0f, .z = -3.0f};
-    float rotation[3] = {0.0f, 0.0f, 0.0f};
-    float scale[3] = {1.0f, 1.0f, 1.0f};
 
     Caelus::Camera camera{};
 

@@ -22,7 +22,7 @@ void main(){
     }
     
     vec3 baseCol = vec3(0.5, 0.5, 0.5);
-    vec3 shadowCol = vec3(0.002, 0.002, 0.008);
+    vec3 shadowCol = vec3(0, 0, 0);
     
     vec3 normal = normalize(fragNormal);
     vec3 toSun = normalize(pc.sunPosEmissive.xyz - fragPos);
