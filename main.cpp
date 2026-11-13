@@ -556,40 +556,103 @@ int main() {
             if (body.orbit && drawOrbit) {
                 auto& orbit = body.orbit.value();
                 constexpr int orbitPoints = 128;
-
-                float lastScreenX;
-                float lastScreenY;
-                Vector4 lastClip;
+                
+                Vector4 lastClip{};
 
                 for (int i = 0; i <= orbitPoints; i++) {
                     double orbitPeriod = std::numbers::pi * 2 * sqrt(
                         orbit.semiMajorAxis * orbit.semiMajorAxis * orbit.semiMajorAxis / bodies[body.parent].gravParam.
                         value());
-                    auto point = i * orbitPeriod / orbitPoints;
+                    auto point = time + i * orbitPeriod / orbitPoints;
                     auto position = Caelus::GetPositionFromOrbit(orbit, bodies[body.parent].gravParam.value(), point);
                     position = bodies[body.parent].worldPosition + position;
                     Vector3 orbitRenderPos = toRenderSpace(position, camera.GetPosition());
                     Vector4 orbitClipPos = viewProj * Vector4(orbitRenderPos.x, orbitRenderPos.y, orbitRenderPos.z,
                                                               1.0f);
-                    float orbitScreenX = (orbitClipPos.x / orbitClipPos.w * 0.5f + 0.5f) * W;
-                    float orbitScreenY = (orbitClipPos.y / orbitClipPos.w * 0.5f + 0.5f) * H;
 
                     if ((orbitClipPos.w <= 0.0f && lastClip.w <= 0.0f) || i == 0) {
-                        lastScreenX = orbitScreenX;
-                        lastScreenY = orbitScreenY;
                         lastClip = orbitClipPos;
                         continue;
                     }
 
                     Vector4 startPos = orbitClipPos;
                     Vector4 endPos = lastClip;
-
-                    lastScreenX = orbitScreenX;
-                    lastScreenY = orbitScreenY;
+                    
                     lastClip = orbitClipPos;
 
-                    if (startPos.w <= 0.0f && endPos.w <= 0.0f) continue;
-                    if (startPos.w <= 0.0f) {}
+                    if ((startPos.w - startPos.z) < 0.0f && (endPos.w - endPos.z) < 0.0f) continue;
+                    if (startPos.w + startPos.x < 0.0f && endPos.w + endPos.x < 0.0f ) continue;
+                    if (startPos.w - startPos.x < 0.0f && endPos.w - endPos.x < 0.0f) continue;
+                    if (startPos.w + startPos.y < 0.0f && endPos.w + endPos.y < 0.0f) continue;
+                    if (startPos.w - startPos.y < 0.0f && endPos.w - endPos.y < 0.0f) continue;
+                    
+                    if (startPos.w - startPos.z < 0.0f) {
+                        float dS = startPos.w - startPos.z;
+                        float dE = endPos.w - endPos.z;
+                        float t = dS / (dS - dE);
+                        startPos = startPos + (endPos - startPos) * t;
+                    }
+                    if (endPos.w - endPos.z < 0.0f) {
+                        float dS = startPos.w - startPos.z;
+                        float dE = endPos.w - endPos.z;
+                        float t = dE / (dE - dS);
+                        endPos = endPos + (startPos - endPos) * t;
+                    }
+                    if (startPos.w + startPos.x < 0.0f) {
+                        float dS = startPos.w + startPos.x;
+                        float dE = endPos.w + endPos.x;
+                        float t = dS / (dS - dE);
+                        startPos = startPos + (endPos - startPos) * t;
+                    }
+                    if (endPos.w + endPos.x < 0.0f) {
+                        float dS = startPos.w + startPos.x;
+                        float dE = endPos.w + endPos.x;
+                        float t = dE / (dE - dS);
+                        endPos = endPos + (startPos - endPos) * t;
+                    }
+                    if (startPos.w - startPos.x < 0.0f) {
+                        float dS = startPos.w - startPos.x;
+                        float dE = endPos.w - endPos.x;
+                        float t = dS / (dS - dE);
+                        startPos = startPos + (endPos - startPos) * t;
+                    }
+                    if (endPos.w - endPos.x < 0.0f) {
+                        float dS = startPos.w - startPos.x;
+                        float dE = endPos.w - endPos.x;
+                        float t = dE / (dE - dS);
+                        endPos = endPos + (startPos - endPos) * t;
+                    }
+                    if (startPos.w + startPos.y < 0.0f) {
+                        float dS = startPos.w + startPos.y;
+                        float dE = endPos.w + endPos.y;
+                        float t = dS / (dS - dE);
+                        startPos = startPos + (endPos - startPos) * t;
+                    }
+                    if (endPos.w + endPos.y < 0.0f) {
+                        float dS = startPos.w + startPos.y;
+                        float dE = endPos.w + endPos.y;
+                        float t = dE / (dE - dS);
+                        endPos = endPos + (startPos - endPos) * t;
+                    }
+                    if (startPos.w - startPos.y < 0.0f) {
+                        float dS = startPos.w - startPos.y;
+                        float dE = endPos.w - endPos.y;
+                        float t = dS / (dS - dE);
+                        startPos = startPos + (endPos - startPos) * t;
+                    }
+                    if (endPos.w - endPos.y < 0.0f) {
+                        float dS = startPos.w - startPos.y;
+                        float dE = endPos.w - endPos.y;
+                        float t = dE / (dE - dS);
+                        endPos = endPos + (startPos - endPos) * t;
+                    }
+                    
+                    float startX = (startPos.x / startPos.w * 0.5f + 0.5f) * W;
+                    float startY = (startPos.y / startPos.w * 0.5f + 0.5f) * H;
+                    float endX = (endPos.x / endPos.w * 0.5f + 0.5f) * W;
+                    float endY = (endPos.y / endPos.w * 0.5f + 0.5f) * H;
+                    
+                    drawList->AddLine({startX, startY}, {endX, endY}, IM_COL32(255, 255, 255, 100), 1);
                 }
             }
 
