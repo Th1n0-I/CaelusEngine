@@ -9,6 +9,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 #include <numbers>
+#include <tracy/Tracy.hpp>
 
 #include "Body.h"
 #include "Camera.h"
@@ -400,6 +401,12 @@ int main() {
         uranus, miranda, ariel, umbriel, titania, oberon,
         neptune, triton
     };
+
+    for (auto& body : bodies) {
+        constexpr int orbitLineResolution = 128;
+        if (body.orbit) body.orbitPoints = Caelus::GetOrbitPoints(body.orbit.value(), orbitLineResolution, bodies[body.parent].gravParam.value());
+    }
+    
     int followIndex = 3;
 
 
@@ -506,159 +513,158 @@ int main() {
 
         ImGui::End();
 
-        for (auto& body : bodies) {
-            if (body.orbit) body.localPosition = Caelus::GetPositionFromOrbit(
-                body.orbit.value(), bodies[body.parent].gravParam.value(), time);
+        {
+            ZoneScopedN("Orbit movement");
+            for (auto& body : bodies) {
+                if (body.orbit) body.localPosition = Caelus::GetPositionFromOrbit(
+                    body.orbit.value(), bodies[body.parent].gravParam.value(), time);
+            }
+
+            for (auto& body : bodies) {
+                if (body.parent == Caelus::Body::noParent) body.worldPosition = body.localPosition;
+                else body.worldPosition = bodies[body.parent].worldPosition + body.localPosition;
+            }
+
+            camera.Follow(bodies[followIndex].worldPosition);
+
+            
+
+            
         }
-
-        for (auto& body : bodies) {
-            if (body.parent == Caelus::Body::noParent) body.worldPosition = body.localPosition;
-            else body.worldPosition = bodies[body.parent].worldPosition + body.localPosition;
-        }
-
-        camera.Follow(bodies[followIndex].worldPosition);
-
         const float aspect = static_cast<float>(renderer.swapChain().extent.width)
-            / static_cast<float>(renderer.swapChain().extent.height);
+                / static_cast<float>(renderer.swapChain().extent.height);
+            Matrix4x4 viewProj = camera.GetPerspective(aspect, 0.1f, 100.0f) * camera.GetView();
+        {
+            ZoneScopedN("Orbit lines");
+            ImDrawList* drawList = ImGui::GetForegroundDrawList();
+            const float W = renderer.swapChain().extent.width;
+            const float H = renderer.swapChain().extent.height;
 
-        Matrix4x4 viewProj = camera.GetPerspective(aspect, 0.1f, 100.0f) * camera.GetView();
+            for (const auto& body : bodies) {
+                bool drawPlanetData = true;
+                bool drawOrbit = true;
 
-        ImDrawList* drawList = ImGui::GetForegroundDrawList();
-        const float W = renderer.swapChain().extent.width;
-        const float H = renderer.swapChain().extent.height;
+                Vector3 renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
+                Vector4 clipPos = viewProj * Vector4(renderPos.x, renderPos.y, renderPos.z, 1.0f);
+                if (clipPos.w <= 0.0f) drawPlanetData = false;
 
-        for (const auto& body : bodies) {
-            bool drawPlanetData = true;
-            bool drawOrbit = true;
+                float screenX = (clipPos.x / clipPos.w * 0.5f + 0.5f) * W;
+                float screenY = (clipPos.y / clipPos.w * 0.5f + 0.5f) * H;
 
-            Vector3 renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
-            Vector4 clipPos = viewProj * Vector4(renderPos.x, renderPos.y, renderPos.z, 1.0f);
-            if (clipPos.w <= 0.0f) drawPlanetData = false;
+                if (body.parent != Caelus::Body::noParent) {
+                    Vector3 parentRenderPos = toRenderSpace(bodies[body.parent].worldPosition, camera.GetPosition());
+                    Vector4 parentClipPos = viewProj * Vector4(parentRenderPos.x, parentRenderPos.y, parentRenderPos.z,
+                                                               1.0f);
+                    if (clipPos.w > 0.0f) {
+                        float parentScreenX = (parentClipPos.x / parentClipPos.w * 0.5f + 0.5f) * W;
+                        float parentScreenY = (parentClipPos.y / parentClipPos.w * 0.5f + 0.5f) * H;
 
-            float screenX = (clipPos.x / clipPos.w * 0.5f + 0.5f) * W;
-            float screenY = (clipPos.y / clipPos.w * 0.5f + 0.5f) * H;
-
-            if (body.parent != Caelus::Body::noParent) {
-                Vector3 parentRenderPos = toRenderSpace(bodies[body.parent].worldPosition, camera.GetPosition());
-                Vector4 parentClipPos = viewProj * Vector4(parentRenderPos.x, parentRenderPos.y, parentRenderPos.z,
-                                                           1.0f);
-                if (clipPos.w > 0.0f) {
-                    float parentScreenX = (parentClipPos.x / parentClipPos.w * 0.5f + 0.5f) * W;
-                    float parentScreenY = (parentClipPos.y / parentClipPos.w * 0.5f + 0.5f) * H;
-
-                    if (std::abs(parentScreenX - screenX) < 10 && std::abs(parentScreenY - screenY) < 10) {
-                        drawPlanetData = false;
-                        drawOrbit = false;
+                        if (std::abs(parentScreenX - screenX) < 10 && std::abs(parentScreenY - screenY) < 10) {
+                            drawPlanetData = false;
+                            drawOrbit = false;
+                        }
                     }
                 }
-            }
 
-            if (body.orbit && drawOrbit) {
-                auto& orbit = body.orbit.value();
-                constexpr int orbitPoints = 128;
-                
-                Vector4 lastClip{};
+                if (body.orbit && drawOrbit) {
+                    Vector4  lastClip{};
+                    
+                    for (int i = 0; i <= body.orbitPoints.size(); i++) {
+                        auto position = body.orbitPoints[fmod(i, body.orbitPoints.size())] + bodies[body.parent].worldPosition;
+                        Vector3 orbitRenderPos = toRenderSpace(position, camera.GetPosition());
+                        Vector4 orbitClipPos = viewProj * Vector4(orbitRenderPos.x, orbitRenderPos.y, orbitRenderPos.z,
+                                                                  1.0f);
 
-                for (int i = 0; i <= orbitPoints; i++) {
-                    double orbitPeriod = std::numbers::pi * 2 * sqrt(
-                        orbit.semiMajorAxis * orbit.semiMajorAxis * orbit.semiMajorAxis / bodies[body.parent].gravParam.
-                        value());
-                    auto point = time + i * orbitPeriod / orbitPoints;
-                    auto position = Caelus::GetPositionFromOrbit(orbit, bodies[body.parent].gravParam.value(), point);
-                    position = bodies[body.parent].worldPosition + position;
-                    Vector3 orbitRenderPos = toRenderSpace(position, camera.GetPosition());
-                    Vector4 orbitClipPos = viewProj * Vector4(orbitRenderPos.x, orbitRenderPos.y, orbitRenderPos.z,
-                                                              1.0f);
+                        if ((orbitClipPos.w <= 0.0f && lastClip.w <= 0.0f) || i == 0) {
+                            lastClip = orbitClipPos;
+                            continue;
+                        }
 
-                    if ((orbitClipPos.w <= 0.0f && lastClip.w <= 0.0f) || i == 0) {
+                        Vector4 startPos = orbitClipPos;
+                        Vector4 endPos = lastClip;
+                    
                         lastClip = orbitClipPos;
-                        continue;
-                    }
 
-                    Vector4 startPos = orbitClipPos;
-                    Vector4 endPos = lastClip;
+                        if ((startPos.w - startPos.z) < 0.0f && (endPos.w - endPos.z) < 0.0f) continue;
+                        if (startPos.w + startPos.x < 0.0f && endPos.w + endPos.x < 0.0f ) continue;
+                        if (startPos.w - startPos.x < 0.0f && endPos.w - endPos.x < 0.0f) continue;
+                        if (startPos.w + startPos.y < 0.0f && endPos.w + endPos.y < 0.0f) continue;
+                        if (startPos.w - startPos.y < 0.0f && endPos.w - endPos.y < 0.0f) continue;
                     
-                    lastClip = orbitClipPos;
-
-                    if ((startPos.w - startPos.z) < 0.0f && (endPos.w - endPos.z) < 0.0f) continue;
-                    if (startPos.w + startPos.x < 0.0f && endPos.w + endPos.x < 0.0f ) continue;
-                    if (startPos.w - startPos.x < 0.0f && endPos.w - endPos.x < 0.0f) continue;
-                    if (startPos.w + startPos.y < 0.0f && endPos.w + endPos.y < 0.0f) continue;
-                    if (startPos.w - startPos.y < 0.0f && endPos.w - endPos.y < 0.0f) continue;
+                        if (startPos.w - startPos.z < 0.0f) {
+                            float dS = startPos.w - startPos.z;
+                            float dE = endPos.w - endPos.z;
+                            float t = dS / (dS - dE);
+                            startPos = startPos + (endPos - startPos) * t;
+                        }
+                        if (endPos.w - endPos.z < 0.0f) {
+                            float dS = startPos.w - startPos.z;
+                            float dE = endPos.w - endPos.z;
+                            float t = dE / (dE - dS);
+                            endPos = endPos + (startPos - endPos) * t;
+                        }
+                        if (startPos.w + startPos.x < 0.0f) {
+                            float dS = startPos.w + startPos.x;
+                            float dE = endPos.w + endPos.x;
+                            float t = dS / (dS - dE);
+                            startPos = startPos + (endPos - startPos) * t;
+                        }
+                        if (endPos.w + endPos.x < 0.0f) {
+                            float dS = startPos.w + startPos.x;
+                            float dE = endPos.w + endPos.x;
+                            float t = dE / (dE - dS);
+                            endPos = endPos + (startPos - endPos) * t;
+                        }
+                        if (startPos.w - startPos.x < 0.0f) {
+                            float dS = startPos.w - startPos.x;
+                            float dE = endPos.w - endPos.x;
+                            float t = dS / (dS - dE);
+                            startPos = startPos + (endPos - startPos) * t;
+                        }
+                        if (endPos.w - endPos.x < 0.0f) {
+                            float dS = startPos.w - startPos.x;
+                            float dE = endPos.w - endPos.x;
+                            float t = dE / (dE - dS);
+                            endPos = endPos + (startPos - endPos) * t;
+                        }
+                        if (startPos.w + startPos.y < 0.0f) {
+                            float dS = startPos.w + startPos.y;
+                            float dE = endPos.w + endPos.y;
+                            float t = dS / (dS - dE);
+                            startPos = startPos + (endPos - startPos) * t;
+                        }
+                        if (endPos.w + endPos.y < 0.0f) {
+                            float dS = startPos.w + startPos.y;
+                            float dE = endPos.w + endPos.y;
+                            float t = dE / (dE - dS);
+                            endPos = endPos + (startPos - endPos) * t;
+                        }
+                        if (startPos.w - startPos.y < 0.0f) {
+                            float dS = startPos.w - startPos.y;
+                            float dE = endPos.w - endPos.y;
+                            float t = dS / (dS - dE);
+                            startPos = startPos + (endPos - startPos) * t;
+                        }
+                        if (endPos.w - endPos.y < 0.0f) {
+                            float dS = startPos.w - startPos.y;
+                            float dE = endPos.w - endPos.y;
+                            float t = dE / (dE - dS);
+                            endPos = endPos + (startPos - endPos) * t;
+                        }
                     
-                    if (startPos.w - startPos.z < 0.0f) {
-                        float dS = startPos.w - startPos.z;
-                        float dE = endPos.w - endPos.z;
-                        float t = dS / (dS - dE);
-                        startPos = startPos + (endPos - startPos) * t;
-                    }
-                    if (endPos.w - endPos.z < 0.0f) {
-                        float dS = startPos.w - startPos.z;
-                        float dE = endPos.w - endPos.z;
-                        float t = dE / (dE - dS);
-                        endPos = endPos + (startPos - endPos) * t;
-                    }
-                    if (startPos.w + startPos.x < 0.0f) {
-                        float dS = startPos.w + startPos.x;
-                        float dE = endPos.w + endPos.x;
-                        float t = dS / (dS - dE);
-                        startPos = startPos + (endPos - startPos) * t;
-                    }
-                    if (endPos.w + endPos.x < 0.0f) {
-                        float dS = startPos.w + startPos.x;
-                        float dE = endPos.w + endPos.x;
-                        float t = dE / (dE - dS);
-                        endPos = endPos + (startPos - endPos) * t;
-                    }
-                    if (startPos.w - startPos.x < 0.0f) {
-                        float dS = startPos.w - startPos.x;
-                        float dE = endPos.w - endPos.x;
-                        float t = dS / (dS - dE);
-                        startPos = startPos + (endPos - startPos) * t;
-                    }
-                    if (endPos.w - endPos.x < 0.0f) {
-                        float dS = startPos.w - startPos.x;
-                        float dE = endPos.w - endPos.x;
-                        float t = dE / (dE - dS);
-                        endPos = endPos + (startPos - endPos) * t;
-                    }
-                    if (startPos.w + startPos.y < 0.0f) {
-                        float dS = startPos.w + startPos.y;
-                        float dE = endPos.w + endPos.y;
-                        float t = dS / (dS - dE);
-                        startPos = startPos + (endPos - startPos) * t;
-                    }
-                    if (endPos.w + endPos.y < 0.0f) {
-                        float dS = startPos.w + startPos.y;
-                        float dE = endPos.w + endPos.y;
-                        float t = dE / (dE - dS);
-                        endPos = endPos + (startPos - endPos) * t;
-                    }
-                    if (startPos.w - startPos.y < 0.0f) {
-                        float dS = startPos.w - startPos.y;
-                        float dE = endPos.w - endPos.y;
-                        float t = dS / (dS - dE);
-                        startPos = startPos + (endPos - startPos) * t;
-                    }
-                    if (endPos.w - endPos.y < 0.0f) {
-                        float dS = startPos.w - startPos.y;
-                        float dE = endPos.w - endPos.y;
-                        float t = dE / (dE - dS);
-                        endPos = endPos + (startPos - endPos) * t;
-                    }
+                        float startX = (startPos.x / startPos.w * 0.5f + 0.5f) * W;
+                        float startY = (startPos.y / startPos.w * 0.5f + 0.5f) * H;
+                        float endX = (endPos.x / endPos.w * 0.5f + 0.5f) * W;
+                        float endY = (endPos.y / endPos.w * 0.5f + 0.5f) * H;
                     
-                    float startX = (startPos.x / startPos.w * 0.5f + 0.5f) * W;
-                    float startY = (startPos.y / startPos.w * 0.5f + 0.5f) * H;
-                    float endX = (endPos.x / endPos.w * 0.5f + 0.5f) * W;
-                    float endY = (endPos.y / endPos.w * 0.5f + 0.5f) * H;
-                    
-                    drawList->AddLine({startX, startY}, {endX, endY}, IM_COL32(255, 255, 255, 100), 1);
+                        drawList->AddLine({startX, startY}, {endX, endY}, IM_COL32(255, 255, 255, 100), 1);
+                    }
                 }
-            }
 
-            if (drawPlanetData) {
-                drawList->AddCircle({screenX, screenY}, 6.0f, IM_COL32(80, 150, 255, 255));
-                drawList->AddText({screenX, screenY - 8.0f}, IM_COL32_WHITE, body.name.c_str());
+                if (drawPlanetData) {
+                    drawList->AddCircle({screenX, screenY}, 6.0f, IM_COL32(80, 150, 255, 255));
+                    drawList->AddText({screenX, screenY - 8.0f}, IM_COL32_WHITE, body.name.c_str());
+                }
             }
         }
 
@@ -675,25 +681,29 @@ int main() {
 
         const Vector3 sunRenderPos = toRenderSpace(bodies[0].worldPosition, camera.GetPosition());
 
-        for (const Caelus::Body& body : bodies) {
-            const Vector3 renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
-            const float r = body.radius;
+        {
+            ZoneScopedN("Rendering");
+            for (const Caelus::Body& body : bodies) {
+                
+                const Vector3 renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
+                const float r = body.radius;
 
-            Matrix4x4 model = translate(renderPos) * ::scale(Vector3(r, r, r));
-            Matrix4x4 matrix = viewProj * model;
+                Matrix4x4 model = translate(renderPos) * ::scale(Vector3(r, r, r));
+                Matrix4x4 matrix = viewProj * model;
 
-            for (int i = 0; i < 4; i++)
-                for (int j = 0; j < 4; j++) consts.matrix[i][j] = matrix.m[i][j];
+                for (int i = 0; i < 4; i++)
+                    for (int j = 0; j < 4; j++) consts.matrix[i][j] = matrix.m[i][j];
 
-            consts.bodyPosRadius = {renderPos.x, renderPos.y, renderPos.z, body.radius};
+                consts.bodyPosRadius = {renderPos.x, renderPos.y, renderPos.z, body.radius};
 
-            const float emissive = body.emissive ? 1 : 0;
-            consts.sunPosEmissive = {sunRenderPos.x, sunRenderPos.y, sunRenderPos.z, emissive};
+                const float emissive = body.emissive ? 1 : 0;
+                consts.sunPosEmissive = {sunRenderPos.x, sunRenderPos.y, sunRenderPos.z, emissive};
 
-            vkCmdPushConstants(cmd, renderer.pipelineLayout(),
-                               VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Caelus::Consts),
-                               &consts);
-            Caelus::Renderer::drawMesh(cmd, cubeMesh);
+                vkCmdPushConstants(cmd, renderer.pipelineLayout(),
+                                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Caelus::Consts),
+                                   &consts);
+                Caelus::Renderer::drawMesh(cmd, cubeMesh);
+            }
         }
 
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
@@ -701,6 +711,7 @@ int main() {
 
         renderer.endFrame();
         time += io.DeltaTime * timeScale;
+        FrameMark;
     }
 
     vkDeviceWaitIdle(renderer.context().device);

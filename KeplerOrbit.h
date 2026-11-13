@@ -4,6 +4,8 @@
 
 #ifndef CAELUSENGINE_KEPLERORBIT_H
 #define CAELUSENGINE_KEPLERORBIT_H
+#include <vector>
+
 #include "Math/Math.h"
 
 
@@ -18,6 +20,7 @@ namespace Caelus {
     };
 
     Math::WorldPos GetPositionFromOrbit(const KeplerData& kd, double parentGravParam, double time);
+    std::vector<Math::WorldPos> GetOrbitPoints(KeplerData& orbit, int points, double gravParam);
 }
 
 

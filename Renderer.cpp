@@ -7,6 +7,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <tracy/Tracy.hpp>
 
 #include "Buffer.h"
 #include "Pipeline.h"
@@ -213,11 +214,15 @@ namespace Caelus {
     }
 
     VkCommandBuffer Renderer::beginFrame(const float clearColor[4]) {
-        vkWaitForFences(m_context.device, 1, &m_inFlight, VK_TRUE, UINT64_MAX);
-        if (vkAcquireNextImageKHR(m_context.device, m_swapChain.handle, UINT64_MAX, m_imageAvailable, VK_NULL_HANDLE,
-                                  &m_imageIndex) == VK_ERROR_OUT_OF_DATE_KHR) {
-            resizeSwapChain(m_window);
-            return VK_NULL_HANDLE;
+        {
+            
+            ZoneScopedN("Wait (vsync/GPU)");
+            vkWaitForFences(m_context.device, 1, &m_inFlight, VK_TRUE, UINT64_MAX);
+            if (vkAcquireNextImageKHR(m_context.device, m_swapChain.handle, UINT64_MAX, m_imageAvailable, VK_NULL_HANDLE,
+                                      &m_imageIndex) == VK_ERROR_OUT_OF_DATE_KHR) {
+                resizeSwapChain(m_window);
+                return VK_NULL_HANDLE;
+                                      }
         }
 
         vkResetFences(m_context.device, 1, &m_inFlight);

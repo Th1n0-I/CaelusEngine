@@ -14,6 +14,12 @@ FetchContent_Declare(imgui
         GIT_TAG v1.92.9b-docking)
 FetchContent_MakeAvailable(imgui)
 
+FetchContent_Declare(tracy
+        GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+        GIT_TAG v0.15.0)
+        set(TRACY_ENABLE ON CACHE BOOL "Enable Tracy profiling" FORCE)
+FetchContent_MakeAvailable(tracy)
+
 add_library(imgui STATIC
         ${imgui_SOURCE_DIR}/imgui.cpp
         ${imgui_SOURCE_DIR}/imgui_draw.cpp
@@ -47,7 +53,7 @@ add_executable(CaelusEngine main.cpp
         Body.h
         KeplerOrbit.cpp
         KeplerOrbit.h)
-target_link_libraries(CaelusEngine PRIVATE glfw Vulkan::Vulkan imgui)
+target_link_libraries(CaelusEngine PRIVATE glfw Vulkan::Vulkan imgui TracyClient)
 
 find_program(GLSLC glslc HINTS "$ENV{VULKAN_SDK}/Bin")
 

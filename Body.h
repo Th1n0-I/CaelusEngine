@@ -22,6 +22,7 @@ namespace Caelus {
         bool emissive = false;
         std::optional<KeplerData> orbit;
         std::optional<double> gravParam;
+        std::vector<Math::WorldPos> orbitPoints;
     };
 } // Caelus
 
