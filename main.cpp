@@ -108,10 +108,25 @@ int main()
     sun.radius = 6.957e8f;
     sun.emissive = true;
     sun.gravParam = 1.32712440018e20;
-    
+
+    Caelus::Body mercury;
+    mercury.name = "Mercury";
+    mercury.parent = 0;
+    mercury.radius = 2.4397e6;
+
+    Caelus::KeplerData mercuryOrbit{
+        5.7909226542e10,
+        0.20563593,
+        0.1222599,
+        3.050705,
+        0.5083626,
+        0.843531
+    };
+
+    mercury.orbit = mercuryOrbit;
+
     Caelus::Body earth;
     earth.name = "Earth";
-    earth.localPosition = WorldPos(10, 0, 0);
     earth.parent = 0;
     earth.radius = 6.371e6f;
     earth.gravParam = 3.986004418e14;
@@ -130,7 +145,7 @@ int main()
     Caelus::Body moon;
     moon.name = "Moon";
     moon.localPosition = WorldPos(3, 0, 0);
-    moon.parent = 1;
+    moon.parent = 2;
     moon.radius = 1.737e6f;
 
     Caelus::KeplerData moonOrbit{
@@ -144,7 +159,8 @@ int main()
 
     moon.orbit = moonOrbit;
     
-    std::vector bodies {sun, earth, moon};
+    std::vector bodies {sun, mercury, earth, moon};
+    int followIndex = 2;
     
     
 
@@ -224,6 +240,17 @@ int main()
                 }
                 ImGui::EndMenu();
             }
+            if (ImGui::BeginMenu("Camera"))
+            {
+                if (ImGui::BeginMenu("Target"))
+                {
+                    for (int i = 0; i < bodies.size(); i++)
+                        if (ImGui::Button(bodies[i].name.c_str()))
+                            followIndex = i;
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMenu();
+            }
             ImGui::EndMainMenuBar();
         }
 
@@ -266,7 +293,7 @@ int main()
             else body.worldPosition = bodies[body.parent].worldPosition + body.localPosition;
         }
         
-        camera.Follow(bodies[1].worldPosition);
+        camera.Follow(bodies[followIndex].worldPosition);
 
         const float aspect = static_cast<float>(renderer.swapChain().extent.width)
             / static_cast<float>(renderer.swapChain().extent.height);
