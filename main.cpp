@@ -17,6 +17,7 @@
 #include "Math/Math.h"
 #include "Mesh.h"
 #include "Primitives.h"
+#include "KeplerOrbit.h"
 
 using namespace Caelus::Math;
 
@@ -106,25 +107,49 @@ int main()
     sun.parent = Caelus::Body::noParent;
     sun.radius = 2;
     sun.emissive = true;
+    sun.gravParam = 1.32712440018e20;
     
     Caelus::Body earth;
     earth.name = "Earth";
     earth.localPosition = WorldPos(10, 0, 0);
     earth.parent = 0;
     earth.radius = 1;
+    earth.gravParam = 3.986004418e14;
+
+    Caelus::KeplerData earthOrbit{
+        1.4959826115e11,
+        0.01671123,
+        -2.672e-7,
+        -0.0431639,
+        1.7966015,
+        0.0
+    };
+
+    earth.orbit = earthOrbit;
     
     Caelus::Body moon;
     moon.name = "Moon";
     moon.localPosition = WorldPos(3, 0, 0);
     moon.parent = 1;
     moon.radius = 0.27f;
+
+    Caelus::KeplerData moonOrbit{
+        3.844e8,
+        0.0549,
+        0.0897972,
+        0.0,
+        0.0,
+        0.0
+    };
+
+    moon.orbit = moonOrbit;
     
     std::vector bodies {sun, earth, moon};
 
+    double time = 0;
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
-
 
         ImGui_ImplVulkan_NewFrame();
         ImGui_ImplGlfw_NewFrame();
@@ -226,8 +251,13 @@ int main()
         ImGui::End();
 
         ImGui::Render();
+
+        for (auto& body : bodies)
+        {
+            if (body.orbit) body.localPosition = Caelus::GetPositionFromOrbit(body.orbit.value(), bodies[body.parent].gravParam.value(), time);
+        }
         
-        for (Caelus::Body& body : bodies)
+        for (auto& body : bodies)
         {
             if (body.parent == Caelus::Body::noParent) body.worldPosition = body.localPosition;
             else body.worldPosition = bodies[body.parent].worldPosition + body.localPosition;
@@ -275,6 +305,7 @@ int main()
 
 
         renderer.endFrame();
+        time += io.DeltaTime * 1.578e6;
     }
 
     vkDeviceWaitIdle(renderer.context().device);

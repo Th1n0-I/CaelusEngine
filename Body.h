@@ -4,9 +4,11 @@
 
 #ifndef CAELUSENGINE_BODY_H
 #define CAELUSENGINE_BODY_H
+#include <optional>
 #include <string>
 
 #include "Math/Math.h"
+#include "KeplerOrbit.h"
 
 namespace Caelus
 {
@@ -20,6 +22,8 @@ namespace Caelus
         Math::WorldPos worldPosition;
         float radius = 1;
         bool emissive = false;
+        std::optional<KeplerData> orbit;
+        std::optional<double> gravParam;
     };
 } // Caelus
 
