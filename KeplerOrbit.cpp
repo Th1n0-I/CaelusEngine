@@ -21,7 +21,7 @@ namespace Caelus
         {
             double dE = (E - kd.eccentricity * sin(E) - meanAnomaly) / (1.0 - kd.eccentricity * cos(E));
             E -= dE;
-            if (abs(dE) < 1e-12) break;
+            if (std::abs(dE) < 1e-12) break;
         }
         
         double x = kd.semiMajorAxis * (cos(E) -kd.eccentricity);

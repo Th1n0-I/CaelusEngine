@@ -30,4 +30,18 @@ namespace Caelus {
         m_pitch += deltaX;
         m_yaw += deltaY;
     }
+
+    Math::Vector3 Camera::GetForward() const
+    {
+        Matrix4x4 v = GetView();
+        Vector3 forward = {-v.m[0][2], -v.m[1][2], -v.m[2][2]};
+        
+        return forward;
+    }
+    
+    void Camera::Follow(const Math::WorldPos& target)
+    {
+        auto forward = GetForward();    
+        m_position = target - WorldPos{forward.x, forward.y, forward.z} * m_distance;
+    }
 }

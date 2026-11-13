@@ -105,7 +105,7 @@ int main()
     sun.name = "Sun";
     sun.localPosition = WorldPos(0, 0, 0);
     sun.parent = Caelus::Body::noParent;
-    sun.radius = 2;
+    sun.radius = 6.957e8f;
     sun.emissive = true;
     sun.gravParam = 1.32712440018e20;
     
@@ -113,7 +113,7 @@ int main()
     earth.name = "Earth";
     earth.localPosition = WorldPos(10, 0, 0);
     earth.parent = 0;
-    earth.radius = 1;
+    earth.radius = 6.371e6f;
     earth.gravParam = 3.986004418e14;
 
     Caelus::KeplerData earthOrbit{
@@ -131,7 +131,7 @@ int main()
     moon.name = "Moon";
     moon.localPosition = WorldPos(3, 0, 0);
     moon.parent = 1;
-    moon.radius = 0.27f;
+    moon.radius = 1.737e6f;
 
     Caelus::KeplerData moonOrbit{
         3.844e8,
@@ -145,8 +145,10 @@ int main()
     moon.orbit = moonOrbit;
     
     std::vector bodies {sun, earth, moon};
+    
+    
 
-    double time = 0;
+    double time = 0, timeScale = 1;
     while (!glfwWindowShouldClose(window))
     {
         glfwPollEvents();
@@ -246,6 +248,7 @@ int main()
             ImGui::DragFloat("Yaw", &camera.GetYaw(), 0.01f);
             ImGui::DragFloat("Sensitivity", &sensitivity, 0.01f);
         }
+        ImGui::DragScalarN("TimeScale", ImGuiDataType_Double, &timeScale, 1, 0.01f);
         ImGui::Separator();
 
         ImGui::End();
@@ -263,6 +266,7 @@ int main()
             else body.worldPosition = bodies[body.parent].worldPosition + body.localPosition;
         }
         
+        camera.Follow(bodies[1].worldPosition);
 
         const float aspect = static_cast<float>(renderer.swapChain().extent.width)
             / static_cast<float>(renderer.swapChain().extent.height);
@@ -305,7 +309,7 @@ int main()
 
 
         renderer.endFrame();
-        time += io.DeltaTime * 1.578e6;
+        time += io.DeltaTime * timeScale;
     }
 
     vkDeviceWaitIdle(renderer.context().device);
