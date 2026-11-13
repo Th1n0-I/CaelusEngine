@@ -12,13 +12,12 @@
 #include "Renderer.h"
 #include "Vertex.h"
 
-namespace Caelus
-{
-    VkShaderModule createShaderModule(const VkDevice &device, const std::vector<char> &code) {
+namespace Caelus {
+    VkShaderModule createShaderModule(const VkDevice& device, const std::vector<char>& code) {
         VkShaderModuleCreateInfo ci{};
         ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         ci.codeSize = code.size();
-        ci.pCode = reinterpret_cast<const uint32_t *>(code.data());
+        ci.pCode = reinterpret_cast<const uint32_t*>(code.data());
 
         VkShaderModule shaderModule;
         if (vkCreateShaderModule(device, &ci, nullptr, &shaderModule) != VK_SUCCESS) {
@@ -28,7 +27,9 @@ namespace Caelus
         return shaderModule;
     }
 
-    bool createPipeline(const VkShaderModule& vertModule, const VkShaderModule& fragModule, const VkDevice& device, const VkFormat format, VkPipelineLayout& layout, VkPipeline& pipeline, VkPushConstantRange& range) {
+    bool createPipeline(const VkShaderModule& vertModule, const VkShaderModule& fragModule, const VkDevice& device,
+                        const VkFormat format, VkPipelineLayout& layout, VkPipeline& pipeline,
+                        VkPushConstantRange& range) {
         VkPipelineShaderStageCreateInfo stages[2]{};
 
         stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -40,12 +41,12 @@ namespace Caelus
         stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
         stages[1].module = fragModule;
         stages[1].pName = "main";
-        
+
         VkVertexInputBindingDescription binding{};
         binding.binding = 0;
         binding.stride = sizeof(Vertex);
         binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        
+
         VkVertexInputAttributeDescription posAttr{};
         posAttr.location = 0;
         posAttr.binding = 0;
@@ -80,8 +81,9 @@ namespace Caelus
         multisampleInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
         VkPipelineColorBlendAttachmentState blendAttachment{};
-        blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT |
-                                         VK_COLOR_COMPONENT_A_BIT;
+        blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
+            |
+            VK_COLOR_COMPONENT_A_BIT;
         blendAttachment.blendEnable = VK_FALSE;
 
         VkPipelineColorBlendStateCreateInfo colorBlendingInfo{};

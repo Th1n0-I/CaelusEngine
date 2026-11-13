@@ -7,8 +7,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-namespace Caelus
-{
+namespace Caelus {
     struct SwapChain {
         VkSwapchainKHR handle = VK_NULL_HANDLE;
         VkFormat format = VK_FORMAT_UNDEFINED;
@@ -20,8 +19,9 @@ namespace Caelus
         VkImageView depthView = VK_NULL_HANDLE;
         VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
     };
-    
-    bool createSwapChain(const VkPhysicalDevice &gpu, const VkSurfaceKHR &surface, const VkDevice &device, SwapChain &out);
+
+    bool createSwapChain(const VkPhysicalDevice& gpu, const VkSurfaceKHR& surface, const VkDevice& device,
+                         SwapChain& out);
 } // Caelus
 
 #endif //CAELUSENGINE_SWAPCHAIN_H

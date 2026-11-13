@@ -22,8 +22,8 @@ namespace Caelus {
     }
 
     Matrix4x4 Camera::GetView() const {
-        return  ::rotateX(-m_pitch) *
-                ::rotateY(-m_yaw);
+        return ::rotateX(-m_pitch) *
+            ::rotateY(-m_yaw);
     }
 
     void Camera::LookAround(float deltaX, float deltaY) {
@@ -31,17 +31,15 @@ namespace Caelus {
         m_yaw += deltaY;
     }
 
-    Math::Vector3 Camera::GetForward() const
-    {
+    Math::Vector3 Camera::GetForward() const {
         Matrix4x4 v = GetView();
         Vector3 forward = {-v.m[0][2], -v.m[1][2], -v.m[2][2]};
-        
+
         return forward;
     }
-    
-    void Camera::Follow(const Math::WorldPos& target)
-    {
-        auto forward = GetForward();    
+
+    void Camera::Follow(const Math::WorldPos& target) {
+        auto forward = GetForward();
         m_position = target - WorldPos{forward.x, forward.y, forward.z} * m_distance;
     }
 }

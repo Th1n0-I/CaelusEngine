@@ -6,10 +6,8 @@
 #define CAELUSENGINE_MESH_H
 #include "Buffer.h"
 
-namespace Caelus
-{
-    struct Mesh
-    {
+namespace Caelus {
+    struct Mesh {
         Buffer vertexBuffer;
         Buffer indexBuffer;
         uint32_t indexCount;

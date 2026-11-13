@@ -41,10 +41,10 @@ namespace Caelus {
         void endFrame();
 
         void resizeSwapChain(GLFWwindow* window);
-        
+
         Buffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, const void* data);
         void destroyBuffer(Buffer& buffer);
-        
+
         Mesh createMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
         void destroyMesh(Mesh& mesh);
         static void drawMesh(VkCommandBuffer commandBuffer, Mesh& mesh);
@@ -65,7 +65,7 @@ namespace Caelus {
         VkPipeline m_pipeline = VK_NULL_HANDLE;
 
         uint32_t m_imageIndex = 0;
-        
+
         VkCommandBuffer beginOneTimeCommand();
         void endOneTimeCommand(VkCommandBuffer commandBuffer);
     };

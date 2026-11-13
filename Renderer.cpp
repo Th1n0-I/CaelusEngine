@@ -13,8 +13,6 @@
 
 
 namespace Caelus {
-    
-
     void Renderer::resizeSwapChain(GLFWwindow* window) {
         int width = 0, height = 0;
         glfwGetFramebufferSize(window, &width, &height);
@@ -30,41 +28,42 @@ namespace Caelus {
         vkDestroyImage(m_context.device, m_swapChain.depthImage, nullptr);
         vkFreeMemory(m_context.device, m_swapChain.depthMemory, nullptr);
 
-        for (const auto v : m_swapChain.views)
-            vkDestroyImageView(m_context.device, v, nullptr);
+        for (const auto v : m_swapChain.views) vkDestroyImageView(m_context.device, v, nullptr);
         vkDestroySwapchainKHR(m_context.device, m_swapChain.handle, nullptr);
 
-        if (!createSwapChain(m_context.gpu, m_context.surface, m_context.device, m_swapChain)) {printf("Failed to resize swapChain!\n"); return;}
+        if (!createSwapChain(m_context.gpu, m_context.surface, m_context.device, m_swapChain)) {
+            printf("Failed to resize swapChain!\n");
+            return;
+        }
         printf("Successfully resized swapChain!\n");
     }
 
-    Buffer Renderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, const void* data)
-    {
+    Buffer Renderer::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, const void* data) {
         Buffer staging{};
-        if (!allocateBuffer(m_context, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, staging))
-        {
-            printf("Failed to allocate buffer!\n"); 
+        if (!allocateBuffer(m_context, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, staging)) {
+            printf("Failed to allocate buffer!\n");
             return {};
         }
-        
+
         void* mapped = nullptr;
         vkMapMemory(m_context.device, staging.memory, 0, size, 0, &mapped);
         memcpy(mapped, data, static_cast<size_t>(size));
         vkUnmapMemory(m_context.device, staging.memory);
-        
+
         Buffer b;
-        if (!allocateBuffer(m_context, size, usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, b))
-        {
+        if (!allocateBuffer(m_context, size, usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, b)) {
             destroyBuffer(staging);
             printf("Failed to allocate buffer!\n");
             return {};
         }
-        
+
         VkCommandBuffer cmd = beginOneTimeCommand();
-        
+
         VkBufferCopy region{.srcOffset = 0, .dstOffset = 0, .size = size};
         vkCmdCopyBuffer(cmd, staging.handle, b.handle, 1, &region);
-        
+
         VkBufferMemoryBarrier2 barrier{};
         barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2;
         barrier.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
@@ -76,15 +75,15 @@ namespace Caelus {
         barrier.buffer = b.handle;
         barrier.offset = 0;
         barrier.size = VK_WHOLE_SIZE;
-        
+
         VkDependencyInfo dep{};
         dep.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
         dep.bufferMemoryBarrierCount = 1;
         dep.pBufferMemoryBarriers = &barrier;
         vkCmdPipelineBarrier2(cmd, &dep);
-        
+
         endOneTimeCommand(cmd);
-        
+
         destroyBuffer(staging);
         return b;
     }
@@ -92,18 +91,17 @@ namespace Caelus {
     void Renderer::destroyBuffer(Buffer& buffer) {
         Caelus::destroyBuffer(m_context.device, buffer); // the Caelus:: is needed, see earlier
     }
-    
-    VkCommandBuffer Renderer::beginOneTimeCommand()
-    {
+
+    VkCommandBuffer Renderer::beginOneTimeCommand() {
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.commandPool = m_commandPool;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = 1;
-        
+
         VkCommandBuffer cmd;
         vkAllocateCommandBuffers(m_context.device, &allocInfo, &cmd);
-        
+
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -111,50 +109,48 @@ namespace Caelus {
         return cmd;
     }
 
-    void Renderer::endOneTimeCommand(VkCommandBuffer commandBuffer)
-    {
+    void Renderer::endOneTimeCommand(VkCommandBuffer commandBuffer) {
         vkEndCommandBuffer(commandBuffer);
-        
+
         VkCommandBufferSubmitInfo cbInfo{};
         cbInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
         cbInfo.commandBuffer = commandBuffer;
-        
+
         VkSubmitInfo2 submitInfo{};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
         submitInfo.commandBufferInfoCount = 1;
         submitInfo.pCommandBufferInfos = &cbInfo;
-        
+
         vkQueueSubmit2(m_context.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
         vkQueueWaitIdle(m_context.graphicsQueue);
-        
+
         vkFreeCommandBuffers(m_context.device, m_commandPool, 1, &commandBuffer);
     }
-    
-    Mesh Renderer::createMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices)
-    {
+
+    Mesh Renderer::createMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) {
         Mesh m;
-        m.vertexBuffer = createBuffer(vertices.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vertices.data());
-        m.indexBuffer = createBuffer(indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, indices.data());
+        m.vertexBuffer = createBuffer(vertices.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                      vertices.data());
+        m.indexBuffer = createBuffer(indices.size() * sizeof(uint32_t), VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                                     indices.data());
         m.indexCount = static_cast<uint32_t>(indices.size());
         return m;
     }
-    
-    void Renderer::destroyMesh(Mesh& m)
-    {
+
+    void Renderer::destroyMesh(Mesh& m) {
         destroyBuffer(m.vertexBuffer);
         destroyBuffer(m.indexBuffer);
         m = {};
     }
 
-    void Renderer::drawMesh(VkCommandBuffer commandBuffer, Mesh& mesh)
-    {
+    void Renderer::drawMesh(VkCommandBuffer commandBuffer, Mesh& mesh) {
         VkDeviceSize offset = 0;
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer.handle, &offset);
         vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0,0);
+        vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
     }
 
-    Renderer::Renderer(GLFWwindow *window, std::vector<char> vertCode, std::vector<char> fragCode) : m_window(window) {
+    Renderer::Renderer(GLFWwindow* window, std::vector<char> vertCode, std::vector<char> fragCode) : m_window(window) {
         VulkanContext context;
 
         createInstance(context.instance);
@@ -164,7 +160,7 @@ namespace Caelus {
         createLogicalDevice(context.queueFamilyIndex, context.gpu, context.device, context.graphicsQueue);
 
         SwapChain swapChain;
-        createSwapChain(context.gpu, context.surface, context.device, swapChain );
+        createSwapChain(context.gpu, context.surface, context.device, swapChain);
 
         m_context = context;
         m_swapChain = swapChain;
@@ -204,14 +200,13 @@ namespace Caelus {
         }
 
         m_renderFinished = std::vector<VkSemaphore>(m_swapChain.images.size());
-        for (auto &s: m_renderFinished) {
-            vkCreateSemaphore(m_context.device, &semaphoreInfo, nullptr, &s);
-        }
+        for (auto& s : m_renderFinished) { vkCreateSemaphore(m_context.device, &semaphoreInfo, nullptr, &s); }
 
         VkShaderModule vertModule = createShaderModule(m_context.device, vertCode);
         VkShaderModule fragModule = createShaderModule(m_context.device, fragCode);
 
-        createPipeline(vertModule, fragModule, m_context.device, m_swapChain.format,m_pipelineLayout,m_pipeline, m_range);
+        createPipeline(vertModule, fragModule, m_context.device, m_swapChain.format, m_pipelineLayout, m_pipeline,
+                       m_range);
 
         vkDestroyShaderModule(m_context.device, vertModule, nullptr);
         vkDestroyShaderModule(m_context.device, fragModule, nullptr);
@@ -219,7 +214,8 @@ namespace Caelus {
 
     VkCommandBuffer Renderer::beginFrame(const float clearColor[4]) {
         vkWaitForFences(m_context.device, 1, &m_inFlight, VK_TRUE, UINT64_MAX);
-        if (vkAcquireNextImageKHR(m_context.device, m_swapChain.handle, UINT64_MAX, m_imageAvailable, VK_NULL_HANDLE, &m_imageIndex) == VK_ERROR_OUT_OF_DATE_KHR) {
+        if (vkAcquireNextImageKHR(m_context.device, m_swapChain.handle, UINT64_MAX, m_imageAvailable, VK_NULL_HANDLE,
+                                  &m_imageIndex) == VK_ERROR_OUT_OF_DATE_KHR) {
             resizeSwapChain(m_window);
             return VK_NULL_HANDLE;
         }
@@ -242,22 +238,29 @@ namespace Caelus {
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.image = m_swapChain.images[m_imageIndex];
-        barrier.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1};
+        barrier.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0,
+            .layerCount = 1
+        };
 
         VkImageMemoryBarrier2 depthBarrier{};
         depthBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
         depthBarrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
         depthBarrier.srcAccessMask = 0;
-        depthBarrier.dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
+        depthBarrier.dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT |
+            VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT;
         depthBarrier.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
         depthBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         depthBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
         depthBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         depthBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         depthBarrier.image = m_swapChain.depthImage;
-        depthBarrier.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1};
+        depthBarrier.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0,
+            .layerCount = 1
+        };
 
-        const VkImageMemoryBarrier2 barriers[2] = { barrier, depthBarrier };
+        const VkImageMemoryBarrier2 barriers[2] = {barrier, depthBarrier};
 
         VkDependencyInfo dependencyInfo{};
         dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
@@ -272,7 +275,7 @@ namespace Caelus {
         colorAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         colorAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         colorAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachmentInfo.clearValue.color = {clearColor[0],clearColor[1], clearColor[2],clearColor[3]};
+        colorAttachmentInfo.clearValue.color = {clearColor[0], clearColor[1], clearColor[2], clearColor[3]};
 
         VkRenderingAttachmentInfo depthAttachmentInfo{};
         depthAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
@@ -280,11 +283,12 @@ namespace Caelus {
         depthAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
         depthAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         depthAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachmentInfo.clearValue.depthStencil = {.depth = 0.0f, .stencil = 0}; //? Clear to 0 since reverse z uses 0 as furthest away.
+        depthAttachmentInfo.clearValue.depthStencil = {.depth = 0.0f, .stencil = 0};
+        //? Clear to 0 since reverse z uses 0 as furthest away.
 
         VkRenderingInfo renderInfo{};
         renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
-        renderInfo.renderArea = {.offset = {.x = 0,.y = 0}, .extent = m_swapChain.extent};
+        renderInfo.renderArea = {.offset = {.x = 0, .y = 0}, .extent = m_swapChain.extent};
         renderInfo.layerCount = 1;
         renderInfo.colorAttachmentCount = 1;
         renderInfo.pColorAttachments = &colorAttachmentInfo;
@@ -299,9 +303,8 @@ namespace Caelus {
         vp.maxDepth = 1.0f;
         vkCmdSetViewport(m_cmd, 0, 1, &vp);
 
-        VkRect2D scissor{.offset = {.x = 0,.y = 0}, .extent = m_swapChain.extent};
+        VkRect2D scissor{.offset = {.x = 0, .y = 0}, .extent = m_swapChain.extent};
         vkCmdSetScissor(m_cmd, 0, 1, &scissor);
-
 
 
         return m_cmd;
@@ -321,7 +324,10 @@ namespace Caelus {
         toPresent.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         toPresent.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         toPresent.image = m_swapChain.images[m_imageIndex];
-        toPresent.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1};
+        toPresent.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0,
+            .layerCount = 1
+        };
 
         VkDependencyInfo dependencyInfo{};
         dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
@@ -366,15 +372,13 @@ namespace Caelus {
         presentInfo.pSwapchains = &m_swapChain.handle;
         presentInfo.pImageIndices = &m_imageIndex;
 
-        if (VkResult presentResult = vkQueuePresentKHR(m_context.graphicsQueue, &presentInfo); presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR) {
-            resizeSwapChain(m_window);
-        }
+        if (VkResult presentResult = vkQueuePresentKHR(m_context.graphicsQueue, &presentInfo); presentResult ==
+            VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR) { resizeSwapChain(m_window); }
     }
 
     Renderer::~Renderer() {
         vkDeviceWaitIdle(m_context.device);
-        for (const VkSemaphore s: m_renderFinished)
-            vkDestroySemaphore(m_context.device, s, nullptr);
+        for (const VkSemaphore s : m_renderFinished) vkDestroySemaphore(m_context.device, s, nullptr);
         vkDestroySemaphore(m_context.device, m_imageAvailable, nullptr);
         vkDestroyFence(m_context.device, m_inFlight, nullptr);
 
@@ -382,8 +386,7 @@ namespace Caelus {
         vkDestroyImageView(m_context.device, m_swapChain.depthView, nullptr);
         vkDestroyImage(m_context.device, m_swapChain.depthImage, nullptr);
         vkFreeMemory(m_context.device, m_swapChain.depthMemory, nullptr);
-        for (const VkImageView v: m_swapChain.views)
-            vkDestroyImageView(m_context.device, v, nullptr);
+        for (const VkImageView v : m_swapChain.views) vkDestroyImageView(m_context.device, v, nullptr);
         vkDestroySwapchainKHR(m_context.device, m_swapChain.handle, nullptr);
 
         vkDestroyPipeline(m_context.device, m_pipeline, nullptr);
@@ -392,7 +395,5 @@ namespace Caelus {
         vkDestroyDevice(m_context.device, nullptr);
         vkDestroySurfaceKHR(m_context.instance, m_context.surface, nullptr);
         vkDestroyInstance(m_context.instance, nullptr);
-
-
     }
 } // Caelus

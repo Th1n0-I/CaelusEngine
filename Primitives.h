@@ -8,13 +8,12 @@
 
 #include "Vertex.h"
 
-namespace Caelus
-{
-    struct MeshData
-    {
+namespace Caelus {
+    struct MeshData {
         std::vector<Caelus::Vertex> Vertices;
         std::vector<uint32_t> Indices;
     };
+
     MeshData createCubeSphere(int resolution);
 } // Caelus
 

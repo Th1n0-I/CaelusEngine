@@ -10,12 +10,10 @@
 #include "Math/Math.h"
 #include "KeplerOrbit.h"
 
-namespace Caelus
-{
-    struct  Body
-    {
+namespace Caelus {
+    struct Body {
         static constexpr int noParent = -1;
-        
+
         std::string name;
         int parent = noParent;
         Math::WorldPos localPosition;

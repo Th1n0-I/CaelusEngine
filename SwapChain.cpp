@@ -9,10 +9,8 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-namespace Caelus
-{
-    
-    static bool createDepthBuffer(const VkPhysicalDevice &gpu, const VkDevice &device, SwapChain &swapChain) {
+namespace Caelus {
+    static bool createDepthBuffer(const VkPhysicalDevice& gpu, const VkDevice& device, SwapChain& swapChain) {
         VkImageCreateInfo ci{};
         ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         ci.imageType = VK_IMAGE_TYPE_2D;
@@ -50,7 +48,10 @@ namespace Caelus
         ici.image = swapChain.depthImage;
         ici.viewType = VK_IMAGE_VIEW_TYPE_2D;
         ici.format = swapChain.depthFormat;
-        ici.subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1};
+        ici.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0,
+            .layerCount = 1
+        };
 
         if (vkCreateImageView(device, &ici, nullptr, &swapChain.depthView) != VK_SUCCESS) {
             printf("Failed to create depth view!");
@@ -59,8 +60,9 @@ namespace Caelus
         printf("Successfully created depth buffer!");
         return true;
     }
-    
-    bool createSwapChain(const VkPhysicalDevice &gpu, const VkSurfaceKHR &surface, const VkDevice &device, SwapChain &out) {
+
+    bool createSwapChain(const VkPhysicalDevice& gpu, const VkSurfaceKHR& surface, const VkDevice& device,
+                         SwapChain& out) {
         //! GET INFORMATION ABOUT THE SWAPCHAIN
         // Get some information Idk
         VkSurfaceCapabilitiesKHR caps;
@@ -74,7 +76,7 @@ namespace Caelus
 
         // Get the correct format
         VkSurfaceFormatKHR chosenFormat = formats[0];
-        for (const auto &format: formats) {
+        for (const auto& format : formats) {
             if (format.format == VK_FORMAT_R8G8B8A8_SRGB &&
                 format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
                 chosenFormat = format;
@@ -84,8 +86,7 @@ namespace Caelus
 
         // How many images to keep in buffer so the cpu doesnt have to wait
         uint32_t imageCount = caps.minImageCount + 1;
-        if (caps.maxImageCount > 0 && imageCount > caps.maxImageCount)
-            imageCount = caps.maxImageCount;
+        if (caps.maxImageCount > 0 && imageCount > caps.maxImageCount) imageCount = caps.maxImageCount;
 
         const VkExtent2D extent = caps.currentExtent;
 

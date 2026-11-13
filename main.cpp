@@ -22,12 +22,10 @@
 
 using namespace Caelus::Math;
 
-static std::vector<char> readFile(const std::string& path)
-{
+static std::vector<char> readFile(const std::string& path) {
     // Get the file
     std::ifstream file(path, std::ios::ate | std::ios::binary);
-    if (!file.is_open())
-    {
+    if (!file.is_open()) {
         printf("Failed to open %s\n", path.c_str());
         return {};
     }
@@ -42,8 +40,7 @@ static std::vector<char> readFile(const std::string& path)
     return buffer;
 }
 
-int main()
-{
+int main() {
     glfwInit();
 
     // finds monitors and hooks to the os type shi
@@ -101,13 +98,13 @@ int main()
     Caelus::MeshData sphereMeshData = Caelus::createCubeSphere(16);
 
     Caelus::Mesh cubeMesh = renderer.createMesh(sphereMeshData.Vertices, sphereMeshData.Indices);
-    
+
     // unit helpers: lets us type values exactly as the JPL tables give them
-    constexpr double AU  = 1.495978707e11;            // meters, exact by IAU definition
-    constexpr double deg = std::numbers::pi / 180.0;  // degrees -> radians
-    constexpr double km  = 1000.0;                    // km -> meters
-    constexpr double km3 = 1.0e9;                     // km^3/s^2 -> m^3/s^2
-    
+    constexpr double AU = 1.495978707e11; // meters, exact by IAU definition
+    constexpr double deg = std::numbers::pi / 180.0; // degrees -> radians
+    constexpr double km = 1000.0; // km -> meters
+    constexpr double km3 = 1.0e9; // km^3/s^2 -> m^3/s^2
+
     // ---- index 0
     Caelus::Body sun;
     sun.name = "Sun";
@@ -126,8 +123,8 @@ int main()
         0.38709927 * AU,
         0.20563593,
         7.00497902 * deg,
-        (252.25032350 - 77.45779628) * deg,   // M0 = L - long.peri
-        (77.45779628 - 48.33076593) * deg,    // w  = long.peri - long.node
+        (252.25032350 - 77.45779628) * deg, // M0 = L - long.peri
+        (77.45779628 - 48.33076593) * deg, // w  = long.peri - long.node
         48.33076593 * deg
     };
 
@@ -235,8 +232,8 @@ int main()
         (44.96476227 - 131.78422574) * deg,
         131.78422574 * deg
     };
-    
-        // ---- index 4
+
+    // ---- index 4
     Caelus::Body moon;
     moon.name = "Moon";
     moon.parent = 3;
@@ -395,8 +392,8 @@ int main()
     triton.radius = 1353.4 * km;
     triton.gravParam = 1428.5 * km3;
     triton.orbit = Caelus::KeplerData{354759.0 * km, 0.000016, 156.865 * deg, 0.0, 0.0, 0.0}; // >90 deg = retrograde
-    
-    std::vector<Caelus::Body> bodies {
+
+    std::vector<Caelus::Body> bodies{
         sun, mercury, venus, earth, moon, mars, phobos, deimos,
         jupiter, ioMoon, europa, ganymede, callisto,
         saturn, mimas, enceladus, tethys, dione, rhea, titan, iapetus,
@@ -404,12 +401,10 @@ int main()
         neptune, triton
     };
     int followIndex = 3;
-    
-    
+
 
     double time = 0, timeScale = 1;
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
         ImGui_ImplVulkan_NewFrame();
@@ -422,16 +417,13 @@ int main()
         Vector3 moveVector{.x = 0.0f, .y = 0.0f, .z = 0.0f};
 
         auto rmbDown = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
-        if (rmbDown && !looking && !io.WantCaptureMouse)
-        {
+        if (rmbDown && !looking && !io.WantCaptureMouse) {
             glfwGetCursorPos(window, &mouseX, &mouseY);
             looking = true;
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
             lastX = mouseX;
             lastY = mouseY;
-        }
-        else if (rmbDown && looking && !io.WantCaptureMouse)
-        {
+        } else if (rmbDown && looking && !io.WantCaptureMouse) {
             double deltaY, deltaX;
             glfwGetCursorPos(window, &mouseX, &mouseY);
             deltaX = mouseX - lastX;
@@ -439,9 +431,7 @@ int main()
             lastX = mouseX;
             lastY = mouseY;
             camera.LookAround(sensitivity * deltaY, sensitivity * -deltaX);
-        }
-        else if (!rmbDown && looking && !io.WantCaptureMouse)
-        {
+        } else if (!rmbDown && looking && !io.WantCaptureMouse) {
             looking = false;
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
@@ -452,8 +442,7 @@ int main()
         if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) { moveVector.x -= 1.0; }
         if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) { moveVector.z += 1.0; }
         if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) { moveVector.z -= 1.0; }
-        if (moveVector.x != 0.0f || moveVector.y != 0.0f || moveVector.z != 0.0f)
-        {
+        if (moveVector.x != 0.0f || moveVector.y != 0.0f || moveVector.z != 0.0f) {
             moveVector = normalize(moveVector) * moveSpeed * io.DeltaTime;
             Matrix4x4 v = camera.GetView();
             Vector3 right = {v.m[0][0], v.m[1][0], v.m[2][0]};
@@ -470,27 +459,20 @@ int main()
                 .z = camera.GetPosition().z + moveVector.z
             };
         }
-        if (!io.WantCaptureMouse && io.MouseWheel != 0.0f)
-            camera.GetDistance() *= pow(0.9, io.MouseWheel);
+        if (!io.WantCaptureMouse && io.MouseWheel != 0.0f) camera.GetDistance() *= pow(0.9, io.MouseWheel);
 
-        if (ImGui::BeginMainMenuBar())
-        {
-            if (ImGui::BeginMenu("Renderer"))
-            {
-                if (ImGui::BeginMenu("Clear Color"))
-                {
+        if (ImGui::BeginMainMenuBar()) {
+            if (ImGui::BeginMenu("Renderer")) {
+                if (ImGui::BeginMenu("Clear Color")) {
                     ImGui::ColorPicker3("Clear Color", &clearColor[0]);
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu("Camera"))
-            {
-                if (ImGui::BeginMenu("Target"))
-                {
+            if (ImGui::BeginMenu("Camera")) {
+                if (ImGui::BeginMenu("Target")) {
                     for (int i = 0; i < bodies.size(); i++)
-                        if (ImGui::Button(bodies[i].name.c_str()))
-                        {
+                        if (ImGui::Button(bodies[i].name.c_str())) {
                             followIndex = i;
                             camera.SetDistance(bodies[followIndex].radius * 5);
                         }
@@ -503,20 +485,17 @@ int main()
 
         ImGui::Begin("Caelus");
         ImGui::Text("%.1f FPS", io.Framerate);
-        
-        for (int i = 0; i < bodies.size(); i++)
-        {
+
+        for (int i = 0; i < bodies.size(); i++) {
             ImGui::PushID(i);
-            if (ImGui::CollapsingHeader(bodies[i].name.c_str()))
-            {
+            if (ImGui::CollapsingHeader(bodies[i].name.c_str())) {
                 ImGui::DragScalarN(bodies[i].name.c_str(), ImGuiDataType_Double, &bodies[i].localPosition.x, 3, 0.01f);
                 ImGui::DragFloat("Scale", &bodies[i].radius, 0.01f);
             }
             ImGui::PopID();
         }
-        
-        if (ImGui::CollapsingHeader("Camera"))
-        {
+
+        if (ImGui::CollapsingHeader("Camera")) {
             ImGui::DragScalarN("Position", ImGuiDataType_Double, &camera.GetPosition().x, 3, 0.01f);
             ImGui::DragFloat("Pitch", &camera.GetPitch(), 0.01f);
             ImGui::DragFloat("Yaw", &camera.GetYaw(), 0.01f);
@@ -524,140 +503,136 @@ int main()
         }
         ImGui::DragScalarN("TimeScale", ImGuiDataType_Double, &timeScale, 1, 0.01f);
         ImGui::Separator();
-        
+
         ImGui::End();
-        
-        for (auto& body : bodies)
-        {
-            if (body.orbit) body.localPosition = Caelus::GetPositionFromOrbit(body.orbit.value(), bodies[body.parent].gravParam.value(), time);
+
+        for (auto& body : bodies) {
+            if (body.orbit) body.localPosition = Caelus::GetPositionFromOrbit(
+                body.orbit.value(), bodies[body.parent].gravParam.value(), time);
         }
-        
-        for (auto& body : bodies)
-        {
+
+        for (auto& body : bodies) {
             if (body.parent == Caelus::Body::noParent) body.worldPosition = body.localPosition;
             else body.worldPosition = bodies[body.parent].worldPosition + body.localPosition;
         }
-        
+
         camera.Follow(bodies[followIndex].worldPosition);
-        
+
         const float aspect = static_cast<float>(renderer.swapChain().extent.width)
             / static_cast<float>(renderer.swapChain().extent.height);
 
         Matrix4x4 viewProj = camera.GetPerspective(aspect, 0.1f, 100.0f) * camera.GetView();
-        
+
         ImDrawList* drawList = ImGui::GetForegroundDrawList();
         const float W = renderer.swapChain().extent.width;
         const float H = renderer.swapChain().extent.height;
-        
-        for (const auto& body : bodies)
-        {
+
+        for (const auto& body : bodies) {
             bool drawPlanetData = true;
             bool drawOrbit = true;
-            
+
             Vector3 renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
             Vector4 clipPos = viewProj * Vector4(renderPos.x, renderPos.y, renderPos.z, 1.0f);
             if (clipPos.w <= 0.0f) drawPlanetData = false;
-            
+
             float screenX = (clipPos.x / clipPos.w * 0.5f + 0.5f) * W;
             float screenY = (clipPos.y / clipPos.w * 0.5f + 0.5f) * H;
-            
-            if (body.parent != Caelus::Body::noParent)
-            {
+
+            if (body.parent != Caelus::Body::noParent) {
                 Vector3 parentRenderPos = toRenderSpace(bodies[body.parent].worldPosition, camera.GetPosition());
-                Vector4 parentClipPos = viewProj * Vector4(parentRenderPos.x, parentRenderPos.y, parentRenderPos.z, 1.0f);
-                if (clipPos.w > 0.0f){
+                Vector4 parentClipPos = viewProj * Vector4(parentRenderPos.x, parentRenderPos.y, parentRenderPos.z,
+                                                           1.0f);
+                if (clipPos.w > 0.0f) {
                     float parentScreenX = (parentClipPos.x / parentClipPos.w * 0.5f + 0.5f) * W;
                     float parentScreenY = (parentClipPos.y / parentClipPos.w * 0.5f + 0.5f) * H;
-                
-                    if (std::abs(parentScreenX - screenX) < 10 && std::abs(parentScreenY - screenY) < 10) {drawPlanetData = false; drawOrbit = false;}} 
-                
+
+                    if (std::abs(parentScreenX - screenX) < 10 && std::abs(parentScreenY - screenY) < 10) {
+                        drawPlanetData = false;
+                        drawOrbit = false;
+                    }
+                }
             }
-            
-            if (body.orbit && drawOrbit)
-            {
+
+            if (body.orbit && drawOrbit) {
                 auto& orbit = body.orbit.value();
                 constexpr int orbitPoints = 128;
-                
+
                 float lastScreenX;
                 float lastScreenY;
                 Vector4 lastClip;
-                
-                for (int i = 0; i <= orbitPoints; i++)
-                {
-                    double orbitPeriod = std::numbers::pi * 2 * sqrt(orbit.semiMajorAxis * orbit.semiMajorAxis * orbit.semiMajorAxis / bodies[body.parent].gravParam.value());
+
+                for (int i = 0; i <= orbitPoints; i++) {
+                    double orbitPeriod = std::numbers::pi * 2 * sqrt(
+                        orbit.semiMajorAxis * orbit.semiMajorAxis * orbit.semiMajorAxis / bodies[body.parent].gravParam.
+                        value());
                     auto point = i * orbitPeriod / orbitPoints;
                     auto position = Caelus::GetPositionFromOrbit(orbit, bodies[body.parent].gravParam.value(), point);
                     position = bodies[body.parent].worldPosition + position;
                     Vector3 orbitRenderPos = toRenderSpace(position, camera.GetPosition());
-                    Vector4 orbitClipPos = viewProj * Vector4(orbitRenderPos.x, orbitRenderPos.y, orbitRenderPos.z, 1.0f);
+                    Vector4 orbitClipPos = viewProj * Vector4(orbitRenderPos.x, orbitRenderPos.y, orbitRenderPos.z,
+                                                              1.0f);
                     float orbitScreenX = (orbitClipPos.x / orbitClipPos.w * 0.5f + 0.5f) * W;
                     float orbitScreenY = (orbitClipPos.y / orbitClipPos.w * 0.5f + 0.5f) * H;
-                    
-                    if ((orbitClipPos.w <= 0.0f && lastClip.w <= 0.0f) || i == 0)
-                    {
+
+                    if ((orbitClipPos.w <= 0.0f && lastClip.w <= 0.0f) || i == 0) {
                         lastScreenX = orbitScreenX;
                         lastScreenY = orbitScreenY;
                         lastClip = orbitClipPos;
                         continue;
                     }
-                    
+
                     Vector4 startPos = orbitClipPos;
                     Vector4 endPos = lastClip;
-                    
+
                     lastScreenX = orbitScreenX;
                     lastScreenY = orbitScreenY;
                     lastClip = orbitClipPos;
-                    
+
                     if (startPos.w <= 0.0f && endPos.w <= 0.0f) continue;
-                    if (startPos.w <= 0.0f)
-                    {
-                        
-                    }
-                    
+                    if (startPos.w <= 0.0f) {}
                 }
             }
-            
-            if (drawPlanetData)
-            {
+
+            if (drawPlanetData) {
                 drawList->AddCircle({screenX, screenY}, 6.0f, IM_COL32(80, 150, 255, 255));
                 drawList->AddText({screenX, screenY - 8.0f}, IM_COL32_WHITE, body.name.c_str());
             }
         }
 
         ImGui::Render();
-        
+
         VkCommandBuffer cmd = renderer.beginFrame(clearColor);
         if (cmd == VK_NULL_HANDLE) continue;
-        
+
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline());
-        
+
         Caelus::Consts consts{};
         consts.res[0] = static_cast<int>(renderer.swapChain().extent.width);
         consts.res[1] = static_cast<int>(renderer.swapChain().extent.height);
-        
+
         const Vector3 sunRenderPos = toRenderSpace(bodies[0].worldPosition, camera.GetPosition());
-        
-        for (const Caelus::Body& body : bodies)
-        {
+
+        for (const Caelus::Body& body : bodies) {
             const Vector3 renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
             const float r = body.radius;
-            
+
             Matrix4x4 model = translate(renderPos) * ::scale(Vector3(r, r, r));
             Matrix4x4 matrix = viewProj * model;
-            
+
             for (int i = 0; i < 4; i++)
-                for (int j = 0; j < 4; j++)
-                    consts.matrix[i][j] = matrix.m[i][j];
-            
+                for (int j = 0; j < 4; j++) consts.matrix[i][j] = matrix.m[i][j];
+
             consts.bodyPosRadius = {renderPos.x, renderPos.y, renderPos.z, body.radius};
-            
+
             const float emissive = body.emissive ? 1 : 0;
             consts.sunPosEmissive = {sunRenderPos.x, sunRenderPos.y, sunRenderPos.z, emissive};
-            
-            vkCmdPushConstants(cmd, renderer.pipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Caelus::Consts), &consts);
+
+            vkCmdPushConstants(cmd, renderer.pipelineLayout(),
+                               VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Caelus::Consts),
+                               &consts);
             Caelus::Renderer::drawMesh(cmd, cubeMesh);
         }
-        
+
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
 

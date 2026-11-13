@@ -7,9 +7,8 @@
 #include "Math/Math.h"
 
 
-namespace Caelus{
-    struct KeplerData
-    {
+namespace Caelus {
+    struct KeplerData {
         double semiMajorAxis = 0.0;
         double eccentricity = 0.0;
         double inclination = 0.0;
@@ -17,11 +16,9 @@ namespace Caelus{
         double argOfPeriapsis = 0.0;
         double longOfAscendingNode = 0.0;
     };
-    
-    Math::WorldPos GetPositionFromOrbit(const KeplerData& kd, double parentGravParam, double time);
-    
-}
 
+    Math::WorldPos GetPositionFromOrbit(const KeplerData& kd, double parentGravParam, double time);
+}
 
 
 #endif //CAELUSENGINE_KEPLERORBIT_H

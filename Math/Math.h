@@ -7,10 +7,8 @@
 #include <cmath>
 
 
-namespace Caelus::Math
-{
-    struct Vector4
-    {
+namespace Caelus::Math {
+    struct Vector4 {
         float x, y, z, w;
 
         Vector4 operator+(const Vector4& b) const { return {.x = x + b.x, .y = y + b.y, .z = z + b.z, .w = w + b.w}; }
@@ -24,13 +22,9 @@ namespace Caelus::Math
 
     static Vector4 normalize(const Vector4& a) { return a / a.length(); }
 
-    static float dot(const Vector4& a, const Vector4& b)
-    {
-        return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-    }
+    static float dot(const Vector4& a, const Vector4& b) { return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w; }
 
-    struct Vector3
-    {
+    struct Vector3 {
         float x, y, z;
 
         Vector3 operator+(const Vector3& b) const { return {.x = x + b.x, .y = y + b.y, .z = z + b.z}; }
@@ -42,18 +36,11 @@ namespace Caelus::Math
         [[nodiscard]] float length() const { return sqrtf(x * x + y * y + z * z); }
     };
 
-    static float dot(const Vector3& a, const Vector3& b)
-    {
-        return a.x * b.x + a.y * b.y + a.z * b.z;
-    }
+    static float dot(const Vector3& a, const Vector3& b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
-    static Vector3 normalize(const Vector3& a)
-    {
-        return {a / a.length()};
-    }
+    static Vector3 normalize(const Vector3& a) { return {a / a.length()}; }
 
-    struct Vector2
-    {
+    struct Vector2 {
         float x, y;
 
         Vector2 operator+(const Vector2& b) const { return {.x = x + b.x, .y = y + b.y}; }
@@ -63,15 +50,13 @@ namespace Caelus::Math
         Vector2 operator/(const float& b) const { return {.x = x / b, .y = y / b}; }
         Vector2 operator/(const Vector2& b) const { return {.x = x / b.x, .y = y / b.y}; }
 
-        Vector2& operator+=(const Vector2& b)
-        {
+        Vector2& operator+=(const Vector2& b) {
             x += b.x;
             y += b.y;
             return *this;
         }
 
-        Vector2& operator-=(const Vector2& b)
-        {
+        Vector2& operator-=(const Vector2& b) {
             x -= b.x;
             y -= b.y;
             return *this;
@@ -80,18 +65,13 @@ namespace Caelus::Math
         [[nodiscard]] float length() const { return sqrtf(x * x + y * y); }
     };
 
-    static Vector2 normalize(const Vector2& a)
-    {
-        return {a / a.length()};
-    }
+    static Vector2 normalize(const Vector2& a) { return {a / a.length()}; }
 
-    struct Matrix4x4
-    {
+    struct Matrix4x4 {
         // [COLUMN][ROW]
         float m[4][4];
 
-        Vector4 operator*(const Vector4& v) const
-        {
+        Vector4 operator*(const Vector4& v) const {
             const auto v1 = Vector4{.x = v.x * m[0][0], .y = v.x * m[0][1], .z = v.x * m[0][2], .w = v.x * m[0][3]};
             const auto v2 = Vector4{.x = v.y * m[1][0], .y = v.y * m[1][1], .z = v.y * m[1][2], .w = v.y * m[1][3]};
             const auto v3 = Vector4{.x = v.z * m[2][0], .y = v.z * m[2][1], .z = v.z * m[2][2], .w = v.z * m[2][3]};
@@ -99,8 +79,7 @@ namespace Caelus::Math
             return v1 + v2 + v3 + v4;
         }
 
-        Matrix4x4 operator*(const Matrix4x4& M) const
-        {
+        Matrix4x4 operator*(const Matrix4x4& M) const {
             Matrix4x4 result{};
             Vector4 col1 = *this * Vector4{.x = M.m[0][0], .y = M.m[0][1], .z = M.m[0][2], .w = M.m[0][3]};
             Vector4 col2 = *this * Vector4{.x = M.m[1][0], .y = M.m[1][1], .z = M.m[1][2], .w = M.m[1][3]};
@@ -115,8 +94,7 @@ namespace Caelus::Math
         }
     };
 
-    static Matrix4x4 identity()
-    {
+    static Matrix4x4 identity() {
         Matrix4x4 r{};
         r.m[0][0] = 1.0f;
         r.m[1][1] = 1.0f;
@@ -125,8 +103,7 @@ namespace Caelus::Math
         return r;
     }
 
-    static Matrix4x4 scale(const Vector4& scale)
-    {
+    static Matrix4x4 scale(const Vector4& scale) {
         Matrix4x4 r = identity();
         r.m[0][0] = scale.x;
         r.m[1][1] = scale.y;
@@ -134,8 +111,7 @@ namespace Caelus::Math
         return r;
     }
 
-    static Matrix4x4 scale(const Vector3& scale)
-    {
+    static Matrix4x4 scale(const Vector3& scale) {
         Matrix4x4 r = identity();
         r.m[0][0] = scale.x;
         r.m[1][1] = scale.y;
@@ -143,8 +119,7 @@ namespace Caelus::Math
         return r;
     }
 
-    static Matrix4x4 rotateX(const float theta)
-    {
+    static Matrix4x4 rotateX(const float theta) {
         Matrix4x4 r = identity();
         r.m[1][1] = cosf(theta);
         r.m[1][2] = -sinf(theta);
@@ -153,8 +128,7 @@ namespace Caelus::Math
         return r;
     }
 
-    static Matrix4x4 rotateY(const float theta)
-    {
+    static Matrix4x4 rotateY(const float theta) {
         Matrix4x4 r = identity();
         r.m[0][0] = cosf(theta);
         r.m[0][2] = -sinf(theta);
@@ -163,8 +137,7 @@ namespace Caelus::Math
         return r;
     }
 
-    static Matrix4x4 rotateZ(const float theta)
-    {
+    static Matrix4x4 rotateZ(const float theta) {
         Matrix4x4 r = identity();
         r.m[0][0] = cosf(theta);
         r.m[0][1] = -sinf(theta);
@@ -173,8 +146,7 @@ namespace Caelus::Math
         return r;
     }
 
-    static Matrix4x4 translate(const Vector4& translate)
-    {
+    static Matrix4x4 translate(const Vector4& translate) {
         Matrix4x4 r = identity();
         r.m[3][0] = translate.x;
         r.m[3][1] = translate.y;
@@ -182,8 +154,7 @@ namespace Caelus::Math
         return r;
     }
 
-    static Matrix4x4 translate(const Vector3& translate)
-    {
+    static Matrix4x4 translate(const Vector3& translate) {
         Matrix4x4 r = identity();
         r.m[3][0] = translate.x;
         r.m[3][1] = translate.y;
@@ -191,8 +162,7 @@ namespace Caelus::Math
         return r;
     }
 
-    struct WorldPos
-    {
+    struct WorldPos {
         double x = 0, y = 0, z = 0;
 
         WorldPos operator+(const WorldPos& w) const { return {.x = x + w.x, .y = y + w.y, .z = z + w.z}; }
@@ -200,8 +170,7 @@ namespace Caelus::Math
         WorldPos operator*(const double& scale) const { return {.x = x * scale, .y = y * scale, .z = z * scale}; }
     };
 
-    inline Vector3 toRenderSpace(const WorldPos& p, const WorldPos& cameraPos)
-    {
+    inline Vector3 toRenderSpace(const WorldPos& p, const WorldPos& cameraPos) {
         const WorldPos d = p - cameraPos;
         return Vector3{.x = static_cast<float>(d.x), .y = static_cast<float>(d.y), .z = static_cast<float>(d.z)};
     }

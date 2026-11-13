@@ -8,10 +8,8 @@
 #include <vulkan/vulkan_core.h>
 #include "GLFW/glfw3.h"
 
-namespace Caelus
-{
-    bool createInstance(VkInstance& instance)
-    {
+namespace Caelus {
+    bool createInstance(VkInstance& instance) {
         // Tells the driver which vulkan version we are using
         VkApplicationInfo app{};
         app.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -29,16 +27,15 @@ namespace Caelus
         ci.ppEnabledExtensionNames = exts;
 
         // Enables debug for vulkan. ifndef makes sure to only enable if debugging since it impacts performance
-        #ifndef NDEBUG
+#ifndef NDEBUG
         const char* layers[] = {"VK_LAYER_KHRONOS_validation"};
         ci.enabledLayerCount = 1;
         ci.ppEnabledLayerNames = layers;
-        #endif
+#endif
 
 
         // Creates the vulkan Instance
-        if (vkCreateInstance(&ci, nullptr, &instance) != VK_SUCCESS)
-        {
+        if (vkCreateInstance(&ci, nullptr, &instance) != VK_SUCCESS) {
             printf("Failed to create Vulkan instance!\n");
             return false;
         }
@@ -46,8 +43,7 @@ namespace Caelus
         return true;
     }
 
-    bool pickGpu(const VkInstance& instance, VkPhysicalDevice& gpu)
-    {
+    bool pickGpu(const VkInstance& instance, VkPhysicalDevice& gpu) {
         // Finds all gpus
         // call two times, once to get the amount and once to fill an array.
         uint32_t deviceCount = 0;
@@ -57,14 +53,12 @@ namespace Caelus
         vkEnumeratePhysicalDevices(instance, &deviceCount, devices.data());
 
         // Sorts through devices to find one that is an actual gpu
-        for (const auto& device : devices)
-        {
+        for (const auto& device : devices) {
             VkPhysicalDeviceProperties props;
             vkGetPhysicalDeviceProperties(device, &props);
             printf("Device name: %s\n", props.deviceName);
 
-            if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-            {
+            if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
                 gpu = device;
                 return true;
             }
@@ -76,8 +70,7 @@ namespace Caelus
 
     //? returns the index of the queue because the queue doesn't exist yet
     bool findGraphicsQueueFamilyIndex(const VkPhysicalDevice& gpu, uint32_t& queueFamilyIndex,
-                                      const VkSurfaceKHR& surface)
-    {
+                                      const VkSurfaceKHR& surface) {
         // find gpu queue families
         // Run twice, same as in pickGpu()
         uint32_t familyCount = 0;
@@ -87,13 +80,11 @@ namespace Caelus
         vkGetPhysicalDeviceQueueFamilyProperties(gpu, &familyCount, families.data());
 
         // Find which family can draw and present
-        for (uint32_t i = 0; i < familyCount; i++)
-        {
+        for (uint32_t i = 0; i < familyCount; i++) {
             const bool canDraw = families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
             VkBool32 canPresent = VK_FALSE;
             vkGetPhysicalDeviceSurfaceSupportKHR(gpu, i, surface, &canPresent);
-            if (canDraw && canPresent)
-            {
+            if (canDraw && canPresent) {
                 printf("Graphics queue family index: %u\n", i);
                 queueFamilyIndex = i;
                 return true;
@@ -104,8 +95,7 @@ namespace Caelus
     }
 
     bool createLogicalDevice(const uint32_t& queueFamilyIndex, const VkPhysicalDevice& gpu, VkDevice& device,
-                             VkQueue& graphicsQueue)
-    {
+                             VkQueue& graphicsQueue) {
         constexpr float priority = 1.0f;
 
         // The "recipe" for the device queue
@@ -133,8 +123,7 @@ namespace Caelus
         createInfo.ppEnabledExtensionNames = deviceExtensions;
 
         // Create the device
-        if (vkCreateDevice(gpu, &createInfo, nullptr, &device) != VK_SUCCESS)
-        {
+        if (vkCreateDevice(gpu, &createInfo, nullptr, &device) != VK_SUCCESS) {
             printf("Failed to create logical device!\n");
             return false;
         }

@@ -7,8 +7,7 @@
 
 #include <vulkan/vulkan.h>
 
-namespace Caelus
-{
+namespace Caelus {
     struct VulkanContext {
         VkInstance instance = VK_NULL_HANDLE;
         VkSurfaceKHR surface = VK_NULL_HANDLE;
@@ -17,13 +16,14 @@ namespace Caelus
         VkQueue graphicsQueue = VK_NULL_HANDLE;
         uint32_t queueFamilyIndex = UINT32_MAX;
     };
-    
-    
-    
-    bool createInstance(VkInstance& instance);
+
+
+    bool createInstance(VkInstance & instance);
     bool pickGpu(const VkInstance& instance, VkPhysicalDevice& gpu);
-    bool findGraphicsQueueFamilyIndex(const VkPhysicalDevice& gpu, uint32_t& queueFamilyIndex, const VkSurfaceKHR& surface);
-    bool createLogicalDevice(const uint32_t& queueFamilyIndex, const VkPhysicalDevice& gpu, VkDevice& device, VkQueue& graphicsQueue);
+    bool findGraphicsQueueFamilyIndex(const VkPhysicalDevice& gpu, uint32_t& queueFamilyIndex,
+                                      const VkSurfaceKHR& surface);
+    bool createLogicalDevice(const uint32_t& queueFamilyIndex, const VkPhysicalDevice& gpu, VkDevice& device,
+                             VkQueue& graphicsQueue);
 } // caelus
 
 #endif //CAELUSENGINE_VULKANCONTEXT_H
