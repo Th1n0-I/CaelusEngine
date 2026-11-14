@@ -14,6 +14,7 @@ namespace Caelus {
         VkBuffer handle = VK_NULL_HANDLE;
         VkDeviceMemory memory = VK_NULL_HANDLE;
         VkDeviceSize size = 0;
+        void* mapped = nullptr;
     };
 
     uint32_t findMemoryType(const VkPhysicalDevice& gpu, const uint32_t typeFilter, VkMemoryPropertyFlags properties);

@@ -151,10 +151,12 @@ int main() {
 
     auto vertCode = readFile("shaders/triangle.vert.spv");
     auto fragCode = readFile("shaders/triangle.frag.spv");
+    auto lineVertCode = readFile("shaders/Line.vert.spv");
+    auto lineFragCode = readFile("shaders/Line.frag.spv");
 
     // Creates a window >_<
     GLFWwindow* window = glfwCreateWindow(800, 600, "Caelus", nullptr, nullptr);
-    Caelus::Renderer renderer(window, vertCode, fragCode);
+    Caelus::Renderer renderer(window, vertCode, fragCode, lineVertCode, lineFragCode);
 
     // The context, whatever that is
     ImGui::CreateContext();
@@ -219,11 +221,17 @@ int main() {
 
     int followIndex = 3;
 
+    Caelus::Buffer lineBuffer = renderer.createDynamicBuffer(64 * 1024 * sizeof(float) * 3, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    std::vector<float> lineVerts;
+    struct OrbitRange { uint32_t first, count; };
+    std::vector<OrbitRange> orbitRanges;
 
     double time = 0, timeScale = 1;
     std::string overlayText;
     float overlayTimer = 0.0f;
     while (!glfwWindowShouldClose(window)) {
+        lineVerts.clear();
+        orbitRanges.clear();
         glfwPollEvents();
 
         ImGui_ImplVulkan_NewFrame();
@@ -384,65 +392,19 @@ int main() {
                     double planetM = fmod(body.orbit.value().meanAnomalyAtEpoch + n * time, 2 * std::numbers::pi);
                     double step = 2 * std::numbers::pi / Caelus::orbitLineResolution;
                     int k = floor(fmod(planetM - body.orbit.value().meanAnomalyAtEpoch + 2 * std::numbers::pi, 2 * std::numbers::pi) / step);
-                    
+                    uint32_t first = lineVerts.size() / 3;
                     for (int i = 0; i <= body.orbitPoints.size(); i++) {
                         auto position = body.orbitPoints[i % body.orbitPoints.size()];
                         position += bodies[body.parent].worldPosition;
                         Vector3 orbitRenderPos = toRenderSpace(position, camera.GetPosition());
-                        Vector4 orbitClipPos = viewProj * Vector4(orbitRenderPos.x, orbitRenderPos.y, orbitRenderPos.z,
-                                                                  1.0f);
+                        lineVerts.push_back(orbitRenderPos.x); lineVerts.push_back(orbitRenderPos.y); lineVerts.push_back(orbitRenderPos.z);
                         
-                        if (i == k + 1) {
+                        if (i == k) {
                             Vector3 planetRenderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
-                            Vector4 planetClipPos = viewProj * Vector4(planetRenderPos.x, planetRenderPos.y, planetRenderPos.z, 1.0f);
-                            
-                            Vector4 startPos = orbitClipPos;
-                            Vector4 endPos = planetClipPos;
-                            
-                            if (clipLine(startPos, endPos)) {
-                                float startX = (startPos.x / startPos.w * 0.5f + 0.5f) * W;
-                                float startY = (startPos.y / startPos.w * 0.5f + 0.5f) * H;
-                                float endX = (endPos.x / endPos.w * 0.5f + 0.5f) * W;
-                                float endY = (endPos.y / endPos.w * 0.5f + 0.5f) * H;
-
-                                drawList->AddLine({startX, startY}, {endX, endY}, IM_COL32(255, 255, 255, 100), 1);
-                            }
-                            
-                            startPos = planetClipPos;
-                            endPos = lastClip;
-                            
-                            if (clipLine(startPos, endPos)) {
-                                float startX = (startPos.x / startPos.w * 0.5f + 0.5f) * W;
-                                float startY = (startPos.y / startPos.w * 0.5f + 0.5f) * H;
-                                float endX = (endPos.x / endPos.w * 0.5f + 0.5f) * W;
-                                float endY = (endPos.y / endPos.w * 0.5f + 0.5f) * H;
-
-                                drawList->AddLine({startX, startY}, {endX, endY}, IM_COL32(255, 255, 255, 100), 1);
-                            }
-                            
-                            lastClip = orbitClipPos;
-                            continue;
+                            lineVerts.push_back(planetRenderPos.x); lineVerts.push_back(planetRenderPos.y); lineVerts.push_back(planetRenderPos.z);
                         }
-
-                        if ((orbitClipPos.w <= 0.0f && lastClip.w <= 0.0f) || i == 0) {
-                            lastClip = orbitClipPos;
-                            continue;
-                        }
-
-                        Vector4 startPos = orbitClipPos;
-                        Vector4 endPos = lastClip;
-
-                        lastClip = orbitClipPos;
-
-                        if (!clipLine(startPos, endPos)) continue;
-
-                        float startX = (startPos.x / startPos.w * 0.5f + 0.5f) * W;
-                        float startY = (startPos.y / startPos.w * 0.5f + 0.5f) * H;
-                        float endX = (endPos.x / endPos.w * 0.5f + 0.5f) * W;
-                        float endY = (endPos.y / endPos.w * 0.5f + 0.5f) * H;
-
-                        drawList->AddLine({startX, startY}, {endX, endY}, IM_COL32(255, 255, 255, 100), 1);
                     }
+                    orbitRanges.push_back({first, (uint32_t)(lineVerts.size() / 3) - first});
                 }
 
                 if (drawPlanetData) {
@@ -456,9 +418,11 @@ int main() {
 
         VkCommandBuffer cmd = renderer.beginFrame(clearColor);
         if (cmd == VK_NULL_HANDLE) continue;
+        
+        memcpy(lineBuffer.mapped, lineVerts.data(), lineVerts.size() * sizeof(float));
 
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline());
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 0, 1, &starTexture.descriptorSet, 0, nullptr);
+        
+        
 
         Caelus::Consts consts{};
         consts.res[0] = static_cast<int>(renderer.swapChain().extent.width);
@@ -467,7 +431,23 @@ int main() {
         const Vector3 sunRenderPos = toRenderSpace(bodies[0].worldPosition, camera.GetPosition());
 
         {
-            ZoneScopedN("Rendering");
+            ZoneScopedN("Skybox Rendering");
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.skyPipeline());
+            Matrix4x4 model = ::scale(Vector3(1e13f, 1e13f, 1e13f));
+            Matrix4x4 matrix = viewProj * model;
+            
+            for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) consts.matrix[i][j] = matrix.m[i][j];
+            consts.bodyPosRadius = {0, 0, 0, 1e13f};
+            consts.sunPosEmissive.w = 2;
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.skyPipelineLayout(), 0, 1, &starTexture.descriptorSet, 0, nullptr);
+            vkCmdPushConstants(cmd, renderer.skyPipelineLayout(),
+                                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Caelus::Consts),
+                                   &consts);
+            Caelus::Renderer::drawMesh(cmd, cubeMesh);
+        }
+        {
+            ZoneScopedN("Body Rendering");
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline());
             for (const Caelus::Body& body : bodies) {
                 const Vector3 renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
                 const float r = body.radius;
@@ -494,18 +474,20 @@ int main() {
                                    &consts);
                 Caelus::Renderer::drawMesh(cmd, cubeMesh);
             }
-            Matrix4x4 model = ::scale(Vector3(1e13f, 1e13f, 1e13f));
-            Matrix4x4 matrix = viewProj * model;
-            
-            for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) consts.matrix[i][j] = matrix.m[i][j];
-            consts.bodyPosRadius = {0, 0, 0, 1e13f};
-            consts.sunPosEmissive.w = 2;
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 0, 1, &starTexture.descriptorSet, 0, nullptr);
-            vkCmdPushConstants(cmd, renderer.pipelineLayout(),
-                                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Caelus::Consts),
-                                   &consts);
-            Caelus::Renderer::drawMesh(cmd, cubeMesh);
         }
+        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.linePipeline());
+        
+        VkDeviceSize lineOffset = 0;
+        vkCmdBindVertexBuffers(cmd, 0, 1, &lineBuffer.handle, &lineOffset);
+        
+        Caelus::LineConsts lineConsts{};
+        for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) lineConsts.viewProj[i][j] = viewProj.m[i][j];
+        lineConsts.color = {1.0f, 1.0f, 1.0f, 0.4f};
+        vkCmdPushConstants(cmd, renderer.linePipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(lineConsts), &lineConsts);
+        
+        for (const auto& r : orbitRanges)
+            vkCmdDraw(cmd, r.count, 1, r.first, 0);
+        
 
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
@@ -521,6 +503,7 @@ int main() {
 
     renderer.destroyTexture(starTexture);
     renderer.destroyMesh(cubeMesh);
+    renderer.destroyBuffer(lineBuffer);
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();

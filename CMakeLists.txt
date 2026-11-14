@@ -81,3 +81,5 @@ endfunction()
 
 add_shader(CaelusEngine triangle.vert)
 add_shader(CaelusEngine triangle.frag)
+add_shader(CaelusEngine Line.vert)
+add_shader(CaelusEngine Line.frag)

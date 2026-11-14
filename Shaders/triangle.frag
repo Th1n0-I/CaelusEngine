@@ -23,7 +23,15 @@ mat3 rotY(float a) { float c = cos(a), s = sin(a); return mat3(c,0,-s, 0,1,0,  s
 
 void main(){
     if(pc.sunPosEmissive.w > 1.5) {
-        outColor = vec4(texture(starMap, uvFromDirection(normalize(fragPos))).rgb * 0.5, 1.0);
+        vec3 d = normalize(fragPos);
+        vec3 ecl = vec3(d.x, -d.z, d.y);
+        const float eps = radians(23.4393);
+        vec3 eq = vec3(ecl.x, ecl.y * cos(eps) - ecl.z * sin(eps), ecl.y * sin(eps) + ecl.z * cos(eps));
+        float ra = atan(eq.y, eq.x);
+        float dec = asin(eq.z);
+        vec2 skyUV = vec2(0.5 - ra / (2.0 * 3.1415926535), 0.5 - dec / 3.1415926535);
+        
+        outColor = vec4(texture(starMap, skyUV).rgb * 0.5, 1.0);
         return;
     }
 
@@ -34,8 +42,7 @@ void main(){
     
     vec3 sunCol = vec3(1.0, 0.9, 0.7);
     if(pc.sunPosEmissive.w > 0.5){
-        
-        outColor = vec4(texture(starMap, vec2(1.0 - uv.x, uv.y)).rgb, 1.0);;
+        outColor = vec4(texture(starMap, uv).rgb, 1.0);;
         return;
     }
     

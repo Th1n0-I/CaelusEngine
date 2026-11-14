@@ -26,32 +26,31 @@ namespace Caelus {
         }
         return shaderModule;
     }
-
-    bool createPipeline(const VkShaderModule& vertModule, const VkShaderModule& fragModule, const VkDevice& device,
-                        const VkFormat format, VkPipelineLayout& layout, VkPipeline& pipeline,
-                        VkPushConstantRange& range, VkDescriptorSetLayout descriptorSetLayout) {
+    
+    bool createPipeline(const VkDevice& device, VkFormat format, const PipelineDesc& desc,
+                    VkPipelineLayout& layout, VkPipeline& pipeline){
         VkPipelineShaderStageCreateInfo stages[2]{};
-
+        
         stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-        stages[0].module = vertModule;
+        stages[0].module = desc.vert;
         stages[0].pName = "main";
 
         stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        stages[1].module = fragModule;
+        stages[1].module = desc.frag;
         stages[1].pName = "main";
 
         VkVertexInputBindingDescription binding{};
         binding.binding = 0;
-        binding.stride = sizeof(Vertex);
+        binding.stride = desc.vertexStride;
         binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         VkVertexInputAttributeDescription posAttr{};
         posAttr.location = 0;
         posAttr.binding = 0;
         posAttr.format = VK_FORMAT_R32G32B32_SFLOAT;
-        posAttr.offset = offsetof(Vertex, position);
+        posAttr.offset = 0;
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -62,7 +61,7 @@ namespace Caelus {
 
         VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
         inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        inputAssemblyInfo.topology = desc.topology;
 
         VkPipelineViewportStateCreateInfo viewportInfo{};
         viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -84,7 +83,15 @@ namespace Caelus {
         blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT
             |
             VK_COLOR_COMPONENT_A_BIT;
-        blendAttachment.blendEnable = VK_FALSE;
+        if (desc.alphaBlend) {
+            blendAttachment.blendEnable = VK_TRUE;
+            blendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            blendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            blendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+            blendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            blendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+            blendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+        }
 
         VkPipelineColorBlendStateCreateInfo colorBlendingInfo{};
         colorBlendingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -99,12 +106,13 @@ namespace Caelus {
 
         VkPipelineLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        layoutInfo.setLayoutCount = 1;
-        layoutInfo.pSetLayouts = &descriptorSetLayout;
+        layoutInfo.setLayoutCount = desc.setLayouts.size();
+        layoutInfo.pSetLayouts = desc.setLayouts.data();
 
+        VkPushConstantRange range{};  
         range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
         range.offset = 0;
-        range.size = sizeof(Consts);
+        range.size = desc.pushConstantSize;
         layoutInfo.pushConstantRangeCount = 1;
         layoutInfo.pPushConstantRanges = &range;
 
@@ -112,8 +120,8 @@ namespace Caelus {
 
         VkPipelineDepthStencilStateCreateInfo depthInfo{};
         depthInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        depthInfo.depthTestEnable = VK_TRUE;
-        depthInfo.depthWriteEnable = VK_TRUE;
+        depthInfo.depthTestEnable = desc.depthTest;
+        depthInfo.depthWriteEnable = desc.depthWrite;
         depthInfo.depthCompareOp = VK_COMPARE_OP_GREATER; //? Reverse-z, higher value is closer.
 
         VkPipelineRenderingCreateInfo renderingInfo{};
@@ -139,7 +147,7 @@ namespace Caelus {
         pipelineInfo.pDepthStencilState = &depthInfo;
 
         if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline) != VK_SUCCESS) {
-            printf("Failed to create graphics pipeline!\n");
+            printf("Failed to create pipeline!\n");
             return false;
         }
         printf("Pipeline created!\n");

@@ -20,7 +20,7 @@
 namespace Caelus {
     class Renderer {
     public:
-        explicit Renderer(GLFWwindow* window, std::vector<char> vertCode, std::vector<char> fragCode);
+        explicit Renderer(GLFWwindow* window, std::vector<char> vertCode, std::vector<char> fragCode, std::vector<char> lineVertCode, std::vector<char> lineFragCode);
         ~Renderer();
 
         Renderer(const Renderer&) = delete;
@@ -37,14 +37,19 @@ namespace Caelus {
         [[nodiscard]] uint32_t imageIndex() const { return m_imageIndex; }
         [[nodiscard]] VkPipeline pipeline() const { return m_pipeline; }
         [[nodiscard]] VkPipelineLayout pipelineLayout() const { return m_pipelineLayout; }
+        [[nodiscard]] VkPipeline linePipeline() const { return m_linePipeline; }
+        [[nodiscard]] VkPipelineLayout linePipelineLayout() const { return m_linePipelineLayout; }
+        [[nodiscard]] VkPipeline skyPipeline() const { return m_skyPipeline; }
+        [[nodiscard]] VkPipelineLayout skyPipelineLayout() const { return m_skyPipelineLayout; }
 
         VkCommandBuffer beginFrame(const float clearColor[4]);
         void endFrame();
 
         void resizeSwapChain(GLFWwindow* window);
 
+        Buffer createDynamicBuffer(VkDeviceSize size, VkBufferUsageFlags usage);
         Buffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, const void* data);
-        void destroyBuffer(Buffer& buffer);
+        void destroyBuffer(Buffer& buffer) const;
 
         Textures::Texture createTexture(const char* path);
         Textures::Texture createTexture(const unsigned char* pixels, int width, int height);
@@ -63,10 +68,13 @@ namespace Caelus {
         VkFence m_inFlight = VK_NULL_HANDLE;
         VkSemaphore m_imageAvailable = VK_NULL_HANDLE;
         std::vector<VkSemaphore> m_renderFinished;
-
-        VkPushConstantRange m_range;
+        
         VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
         VkPipeline m_pipeline = VK_NULL_HANDLE;
+        VkPipelineLayout m_linePipelineLayout = VK_NULL_HANDLE;
+        VkPipeline m_linePipeline = VK_NULL_HANDLE;
+        VkPipelineLayout m_skyPipelineLayout = VK_NULL_HANDLE;
+        VkPipeline m_skyPipeline = VK_NULL_HANDLE;
         VkDescriptorSetLayout m_textureSetLayout = VK_NULL_HANDLE;
         VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
 

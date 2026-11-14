@@ -89,8 +89,21 @@ namespace Caelus {
         destroyBuffer(staging);
         return b;
     }
+    
+    Buffer Renderer::createDynamicBuffer(VkDeviceSize size, VkBufferUsageFlags usage) {
+        Buffer b{};
+        
+        if (!allocateBuffer(m_context, size, usage, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, b)) {
+            printf("Failed to allocate dynamic buffer! \n");
+            return {};
+        }
+        
+        vkMapMemory(m_context.device, b.memory, 0, size, 0, &b.mapped);
+        return b;
+    }
 
-    void Renderer::destroyBuffer(Buffer& buffer) {
+    void Renderer::destroyBuffer(Buffer& buffer) const {
+        if (buffer.mapped) vkUnmapMemory(m_context.device, buffer.memory);
         Caelus::destroyBuffer(m_context.device, buffer); // the Caelus:: is needed, see earlier
     }
 
@@ -330,7 +343,7 @@ namespace Caelus {
         vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
     }
 
-    Renderer::Renderer(GLFWwindow* window, std::vector<char> vertCode, std::vector<char> fragCode) : m_window(window) {
+    Renderer::Renderer(GLFWwindow* window, std::vector<char> vertCode, std::vector<char> fragCode, std::vector<char> lineVertCode, std::vector<char> lineFragCode) : m_window(window) {
         VulkanContext context;
 
         createInstance(context.instance);
@@ -384,6 +397,8 @@ namespace Caelus {
 
         VkShaderModule vertModule = createShaderModule(m_context.device, vertCode);
         VkShaderModule fragModule = createShaderModule(m_context.device, fragCode);
+        VkShaderModule lineVertModule = createShaderModule(m_context.device, lineVertCode);
+        VkShaderModule lineFragModule = createShaderModule(m_context.device, lineFragCode);
         
         VkDescriptorSetLayoutBinding binding{
             .binding = 0,
@@ -413,8 +428,29 @@ namespace Caelus {
         vkCreateDescriptorPool(m_context.device, &descriptorPoolInfo, nullptr, &m_descriptorPool);
         vkCreateDescriptorSetLayout(m_context.device, &layoutInfo, nullptr, &m_textureSetLayout);
 
-        createPipeline(vertModule, fragModule, m_context.device, m_swapChain.format, m_pipelineLayout, m_pipeline,
-                       m_range, m_textureSetLayout);
+        PipelineDesc mainDesc{
+            .vert = vertModule,
+            .frag = fragModule,
+            .vertexStride = sizeof(Vertex),
+            .pushConstantSize = sizeof(Consts),
+            .setLayouts = {m_textureSetLayout},
+        };
+        createPipeline(m_context.device, m_swapChain.format, mainDesc, m_pipelineLayout, m_pipeline);
+        
+        PipelineDesc lineDesc{};
+        lineDesc.vert = lineVertModule;
+        lineDesc.frag = lineFragModule;
+        lineDesc.vertexStride = sizeof(float) * 3;
+        lineDesc.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+        lineDesc.depthWrite = false;
+        lineDesc.alphaBlend = true;
+        lineDesc.pushConstantSize = sizeof(LineConsts);
+        createPipeline(m_context.device, m_swapChain.format, lineDesc, m_linePipelineLayout, m_linePipeline);
+        
+        PipelineDesc skyDesc = mainDesc;
+        skyDesc.depthTest = false;
+        skyDesc.depthWrite = false;
+        createPipeline(m_context.device, m_swapChain.format, skyDesc, m_skyPipelineLayout, m_skyPipeline);
 
         vkDestroyShaderModule(m_context.device, vertModule, nullptr);
         vkDestroyShaderModule(m_context.device, fragModule, nullptr);
@@ -606,6 +642,9 @@ namespace Caelus {
         
         vkDestroyPipeline(m_context.device, m_pipeline, nullptr);
         vkDestroyPipelineLayout(m_context.device, m_pipelineLayout, nullptr);
+        
+        vkDestroyPipeline(m_context.device, m_linePipeline, nullptr);
+        vkDestroyPipelineLayout(m_context.device, m_linePipelineLayout, nullptr);
 
         vkDestroyDevice(m_context.device, nullptr);
         vkDestroySurfaceKHR(m_context.instance, m_context.surface, nullptr);
