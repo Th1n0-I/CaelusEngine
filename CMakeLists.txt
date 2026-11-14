@@ -52,7 +52,9 @@ add_executable(CaelusEngine main.cpp
         Primitives.h
         Body.h
         KeplerOrbit.cpp
-        KeplerOrbit.h)
+        KeplerOrbit.h
+        SolarSystem.cpp
+        SolarSystem.h)
 target_link_libraries(CaelusEngine PRIVATE glfw Vulkan::Vulkan imgui TracyClient)
 
 find_program(GLSLC glslc HINTS "$ENV{VULKAN_SDK}/Bin")
