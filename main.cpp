@@ -221,6 +221,8 @@ int main() {
 
 
     double time = 0, timeScale = 1;
+    std::string overlayText;
+    float overlayTimer = 0.0f;
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
 
@@ -252,7 +254,7 @@ int main() {
             looking = false;
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         }
-
+        
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) { moveVector.y += 1.0; }
         if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) { moveVector.y -= 1.0; }
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) { moveVector.x += 1.0; }
@@ -298,6 +300,31 @@ int main() {
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
+        }
+        
+        if (ImGui::IsKeyPressed(ImGuiKey_Period, false)) {
+            timeScale *= 10;
+            overlayTimer = 2.0f;
+            overlayText = "Time Warp: " + std::to_string((int)timeScale) + "x";
+        }
+        if (ImGui::IsKeyPressed(ImGuiKey_Comma, false)) {
+            timeScale /= 10; 
+            overlayTimer = 2.0f;
+            overlayText = "Time Warp: " + std::to_string((int)timeScale) + "x";
+        }
+        
+        if (overlayTimer > 0.0f) {
+            overlayTimer -= io.DeltaTime;
+            
+            float alpha = std::min(overlayTimer / 0.5f, 1.0f);
+            
+            ImFont* font = ImGui::GetFont();
+            float size = 22.0f;
+            ImVec2 textSize = font->CalcTextSizeA(size, FLT_MAX, 0.0f, overlayText.c_str());
+            
+            ImVec2 pos = {(io.DisplaySize.x - textSize.x) * 0.5f, 40.0f};
+            ImGui::GetForegroundDrawList()->AddText(font, size, pos,
+        IM_COL32(180, 220, 120, (int)(alpha * 255)), overlayText.c_str());
         }
 
         {
