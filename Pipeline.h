@@ -12,7 +12,7 @@
 namespace Caelus {
     struct Consts {
         int res[2];
-        float pad_[2];
+        float spin[2];
         float matrix[4][4];
         Math::Vector4 bodyPosRadius;
         Math::Vector4 sunPosEmissive;

@@ -7,7 +7,7 @@ layout(location = 1) out vec3 fragPos;
 
 layout(push_constant) uniform Consts{
     int res[2];
-    float pad_[2];
+    float spin[2];
     mat4 matrix;
     vec4 bodyPosRadius;
     vec4 sunPosEmissive;

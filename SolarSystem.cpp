@@ -6,6 +6,7 @@
 //! Body values were gathered and written by AI cuz I don't wanna type allat.
 #include "SolarSystem.h"
 
+#include <cmath>
 #include <numbers>
 
 namespace Caelus {
@@ -15,6 +16,7 @@ namespace Caelus {
         constexpr double deg = std::numbers::pi / 180.0; // degrees -> radians
         constexpr double km = 1000.0; // km -> meters
         constexpr double km3 = 1.0e9; // km^3/s^2 -> m^3/s^2
+        constexpr double hour = 3600; // Hour -> Seconds
 
         // ---- index 0
         Caelus::Body sun;
@@ -24,6 +26,8 @@ namespace Caelus {
         sun.emissive = true;
         sun.gravParam = 1.32712440018e11 * km3;
         sun.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_sun.jpg";
+        sun.axialTilt = 7.25 * deg;
+        sun.rotationalPeriod = 609.12 * hour; // ~25.4 days at the equator
 
         // ---- index 1
         Caelus::Body mercury;
@@ -40,6 +44,8 @@ namespace Caelus {
             48.33076593 * deg
         };
         mercury.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_mercury.jpg";
+        mercury.axialTilt = 0.034 * deg;
+        mercury.rotationalPeriod = 1407.6 * hour; // ~58.6 days, 3 spins per 2 orbits
 
         // ---- index 2
         Caelus::Body venus;
@@ -56,6 +62,8 @@ namespace Caelus {
             76.67984255 * deg
         };
         venus.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/4k_venus_atmosphere.jpg";
+        venus.axialTilt = 177.36 * deg; // tilted almost upside down, which makes it spin backwards (retrograde)
+        venus.rotationalPeriod = 5832.5 * hour; // ~243 days, longer than its year
 
         // ---- index 3
         Caelus::Body earth;
@@ -72,6 +80,8 @@ namespace Caelus {
             0.0 * deg
         };
         earth.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_earth_daymap.jpg";
+        earth.axialTilt = 23.44 * deg;
+        earth.rotationalPeriod = 23.9345 * hour;
 
         // ---- index 5
         Caelus::Body mars;
@@ -88,6 +98,8 @@ namespace Caelus {
             49.55953891 * deg
         };
         mars.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_mars.jpg";
+        mars.axialTilt = 25.19 * deg;
+        mars.rotationalPeriod = 24.6229 * hour;
 
         // ---- index 8
         Caelus::Body jupiter;
@@ -104,6 +116,8 @@ namespace Caelus {
             100.47390909 * deg
         };
         jupiter.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_jupiter.jpg";
+        jupiter.axialTilt = 3.13 * deg;
+        jupiter.rotationalPeriod = 9.925 * hour;
 
         // ---- index 13
         Caelus::Body saturn;
@@ -120,6 +134,8 @@ namespace Caelus {
             113.66242448 * deg
         };
         saturn.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_saturn.jpg";
+        saturn.axialTilt = 26.73 * deg;
+        saturn.rotationalPeriod = 10.656 * hour;
 
         // ---- index 21
         Caelus::Body uranus;
@@ -136,6 +152,8 @@ namespace Caelus {
             74.01692503 * deg
         };
         uranus.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/2k_uranus.jpg";
+        uranus.axialTilt = 97.77 * deg; // rolls around the Sun on its side
+        uranus.rotationalPeriod = 17.24 * hour;
 
         // ---- index 27
         Caelus::Body neptune;
@@ -152,6 +170,8 @@ namespace Caelus {
             131.78422574 * deg
         };
         neptune.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/2k_neptune.jpg";
+        neptune.axialTilt = 28.32 * deg;
+        neptune.rotationalPeriod = 16.11 * hour;
 
         // ---- index 4
         Caelus::Body moon;
@@ -161,6 +181,10 @@ namespace Caelus {
         moon.gravParam = 4902.8 * km3;
         moon.orbit = Caelus::KeplerData{384400.0 * km, 0.0549, 5.145 * deg, 0.0, 0.0, 0.0};
         moon.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_moon.jpg";
+        moon.axialTilt = 1.54 * deg;
+        // Tidally locked: one spin per orbit. Uses the same period formula as the orbit
+        // (2*pi*sqrt(a^3/mu) with Earth's mu), so it stays locked exactly in the sim.
+        moon.rotationalPeriod = 2.0 * std::numbers::pi * std::sqrt(std::pow(384400.0 * km, 3) / (398600.4418 * km3));
 
 
         // ---- index 6

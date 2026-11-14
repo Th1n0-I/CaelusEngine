@@ -25,6 +25,8 @@ namespace Caelus {
         std::vector<Math::WorldPos> orbitPoints;
         std::string texturePath;
         int textureIndex = noParent;
+        double rotationalPeriod = 0;
+        double axialTilt = 0;
     };
 } // Caelus
 

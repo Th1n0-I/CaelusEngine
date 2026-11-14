@@ -482,6 +482,10 @@ int main() {
                 const float emissive = body.emissive ? 1 : 0;
                 consts.sunPosEmissive = {sunRenderPos.x, sunRenderPos.y, sunRenderPos.z, emissive};
                 
+                double spin = body.rotationalPeriod > 0 ? fmod(2.0 * std::numbers::pi * time / body.rotationalPeriod, 2 * std::numbers::pi) : 0.0;
+                consts.spin[0] = (float)body.axialTilt;
+                consts.spin[1] = (float)spin;
+                
                 const auto& tex = body.textureIndex != Caelus::Body::noParent ? textures[body.textureIndex] : whiteTexture;
                 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 0, 1, &tex.descriptorSet, 0, nullptr);
                 
