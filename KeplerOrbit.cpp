@@ -38,12 +38,12 @@ namespace Caelus {
 
         return {xF, zF, -yF}; //? JPL uses weird coordinates dont question or maybe do im not the expert
     }
-    
+
     std::vector<Math::WorldPos> GetOrbitPoints(KeplerData& orbit, int points, double gravParam) {
-        double orbitPeriod = std::numbers::pi * 2 * sqrt(orbit.semiMajorAxis * orbit.semiMajorAxis * orbit.semiMajorAxis / gravParam);
+        double orbitPeriod = std::numbers::pi * 2 * sqrt(
+            orbit.semiMajorAxis * orbit.semiMajorAxis * orbit.semiMajorAxis / gravParam);
         std::vector<Math::WorldPos> localPositions;
         for (int i = 0; i <= points; i++) {
-            
             auto point = i * orbitPeriod / points;
             auto position = Caelus::GetPositionFromOrbit(orbit, gravParam, point);
             localPositions.push_back(position);

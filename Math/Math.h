@@ -166,6 +166,7 @@ namespace Caelus::Math {
         double x = 0, y = 0, z = 0;
 
         WorldPos operator+(const WorldPos& w) const { return {.x = x + w.x, .y = y + w.y, .z = z + w.z}; }
+        WorldPos& operator+=(const WorldPos& w) {x += w.x; y += w.y; z += w.z; return *this;}
         WorldPos operator-(const WorldPos& w) const { return {.x = x - w.x, .y = y - w.y, .z = z - w.z}; }
         WorldPos operator*(const double& scale) const { return {.x = x * scale, .y = y * scale, .z = z * scale}; }
     };

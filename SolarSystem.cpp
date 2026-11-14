@@ -313,7 +313,6 @@ namespace Caelus {
         };
 
         for (auto& body : bodies) {
-            constexpr int orbitLineResolution = 128;
             if (body.orbit) body.orbitPoints = Caelus::GetOrbitPoints(body.orbit.value(), orbitLineResolution, bodies[body.parent].gravParam.value());
         }
         

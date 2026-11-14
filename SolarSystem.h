@@ -9,6 +9,7 @@
 #include "Body.h"
 
 namespace Caelus {
+    constexpr int orbitLineResolution = 512;
     std::vector<Body> createSolarSystem();
 } // Caelus
 
