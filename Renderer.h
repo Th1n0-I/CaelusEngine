@@ -47,6 +47,7 @@ namespace Caelus {
         void destroyBuffer(Buffer& buffer);
 
         Textures::Texture createTexture(const char* path);
+        Textures::Texture createTexture(const unsigned char* pixels, int width, int height);
         void destroyTexture(Textures::Texture& tex);
         Mesh createMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
         void destroyMesh(Mesh& mesh);

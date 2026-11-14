@@ -204,6 +204,17 @@ int main() {
 
     auto bodies = Caelus::createSolarSystem();
     
+    std::vector<Caelus::Textures::Texture> textures;
+    
+    for (auto& body : bodies) {
+        if (body.texturePath.empty()) continue;
+        auto tex = renderer.createTexture(body.texturePath.c_str());
+        body.textureIndex = textures.size();
+        textures.push_back(tex);
+    }
+    
+    unsigned char white[4] = {255, 255, 255, 255};
+    auto whiteTexture = renderer.createTexture(white, 1, 1);
     auto starTexture = renderer.createTexture("C:/Users/volts/Downloads/starmap_2020_16k.png");
 
     int followIndex = 3;
@@ -443,7 +454,10 @@ int main() {
 
                 const float emissive = body.emissive ? 1 : 0;
                 consts.sunPosEmissive = {sunRenderPos.x, sunRenderPos.y, sunRenderPos.z, emissive};
-
+                
+                const auto& tex = body.textureIndex != Caelus::Body::noParent ? textures[body.textureIndex] : whiteTexture;
+                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 0, 1, &tex.descriptorSet, 0, nullptr);
+                
                 vkCmdPushConstants(cmd, renderer.pipelineLayout(),
                                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Caelus::Consts),
                                    &consts);
@@ -455,6 +469,7 @@ int main() {
             for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) consts.matrix[i][j] = matrix.m[i][j];
             consts.bodyPosRadius = {0, 0, 0, 1e13f};
             consts.sunPosEmissive.w = 2;
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 0, 1, &starTexture.descriptorSet, 0, nullptr);
             vkCmdPushConstants(cmd, renderer.pipelineLayout(),
                                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Caelus::Consts),
                                    &consts);

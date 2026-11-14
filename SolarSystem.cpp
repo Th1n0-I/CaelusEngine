@@ -23,6 +23,7 @@ namespace Caelus {
         sun.radius = 695700.0 * km;
         sun.emissive = true;
         sun.gravParam = 1.32712440018e11 * km3;
+        sun.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_sun.jpg";
 
         // ---- index 1
         Caelus::Body mercury;
@@ -38,6 +39,7 @@ namespace Caelus {
             (77.45779628 - 48.33076593) * deg, // w  = long.peri - long.node
             48.33076593 * deg
         };
+        mercury.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_mercury.jpg";
 
         // ---- index 2
         Caelus::Body venus;
@@ -53,6 +55,7 @@ namespace Caelus {
             (131.60246718 - 76.67984255) * deg,
             76.67984255 * deg
         };
+        venus.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/4k_venus_atmosphere.jpg";
 
         // ---- index 3
         Caelus::Body earth;
@@ -68,6 +71,7 @@ namespace Caelus {
             (102.93768193 - 0.0) * deg,
             0.0 * deg
         };
+        earth.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_earth_daymap.jpg";
 
         // ---- index 5
         Caelus::Body mars;
@@ -83,6 +87,7 @@ namespace Caelus {
             (-23.94362959 - 49.55953891) * deg,
             49.55953891 * deg
         };
+        mars.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_mars.jpg";
 
         // ---- index 8
         Caelus::Body jupiter;
@@ -98,6 +103,7 @@ namespace Caelus {
             (14.72847983 - 100.47390909) * deg,
             100.47390909 * deg
         };
+        jupiter.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_jupiter.jpg";
 
         // ---- index 13
         Caelus::Body saturn;
@@ -113,6 +119,7 @@ namespace Caelus {
             (92.59887831 - 113.66242448) * deg,
             113.66242448 * deg
         };
+        saturn.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_saturn.jpg";
 
         // ---- index 21
         Caelus::Body uranus;
@@ -128,6 +135,7 @@ namespace Caelus {
             (170.95427630 - 74.01692503) * deg,
             74.01692503 * deg
         };
+        uranus.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/2k_uranus.jpg";
 
         // ---- index 27
         Caelus::Body neptune;
@@ -143,6 +151,7 @@ namespace Caelus {
             (44.96476227 - 131.78422574) * deg,
             131.78422574 * deg
         };
+        neptune.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/2k_neptune.jpg";
 
         // ---- index 4
         Caelus::Body moon;
@@ -151,6 +160,8 @@ namespace Caelus {
         moon.radius = 1737.4 * km;
         moon.gravParam = 4902.8 * km3;
         moon.orbit = Caelus::KeplerData{384400.0 * km, 0.0549, 5.145 * deg, 0.0, 0.0, 0.0};
+        moon.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_moon.jpg";
+
 
         // ---- index 6
         Caelus::Body phobos;
@@ -302,7 +313,8 @@ namespace Caelus {
         triton.parent = 27;
         triton.radius = 1353.4 * km;
         triton.gravParam = 1428.5 * km3;
-        triton.orbit = Caelus::KeplerData{354759.0 * km, 0.000016, 156.865 * deg, 0.0, 0.0, 0.0}; // >90 deg = retrograde
+        triton.orbit = Caelus::KeplerData{354759.0 * km, 0.000016, 156.865 * deg, 0.0, 0.0, 0.0};
+        // >90 deg = retrograde
 
         std::vector<Caelus::Body> bodies{
             sun, mercury, venus, earth, moon, mars, phobos, deimos,
@@ -313,9 +325,10 @@ namespace Caelus {
         };
 
         for (auto& body : bodies) {
-            if (body.orbit) body.orbitPoints = Caelus::GetOrbitPoints(body.orbit.value(), orbitLineResolution, bodies[body.parent].gravParam.value());
+            if (body.orbit) body.orbitPoints = Caelus::GetOrbitPoints(body.orbit.value(), orbitLineResolution,
+                                                                      bodies[body.parent].gravParam.value());
         }
-        
+
         return bodies;
     }
 } // Caelus

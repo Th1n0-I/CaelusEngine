@@ -130,8 +130,6 @@ namespace Caelus {
     }
 
     Textures::Texture Renderer::createTexture(const char* path) {
-        Textures::Texture tex;
-
         int width, height, channels;
         stbi_uc* pixels = stbi_load(path, &width, &height, &channels, STBI_rgb_alpha);
         if (!pixels) {
@@ -139,6 +137,15 @@ namespace Caelus {
             return {};
         }
 
+        const Textures::Texture tex = createTexture(pixels, width, height);
+        
+        stbi_image_free(pixels);
+        
+        return tex;
+    }
+    
+    Textures::Texture Renderer::createTexture(const unsigned char* pixels, int width, int height) {
+        Textures::Texture tex;
         VkDeviceSize size = static_cast<VkDeviceSize>(width) * height * 4;
         tex.width = static_cast<uint32_t>(width);
         tex.height = static_cast<uint32_t>(height);
@@ -154,7 +161,7 @@ namespace Caelus {
         vkMapMemory(m_context.device, staging.memory, 0, size, 0, &mapped);
         memcpy(mapped, pixels, static_cast<size_t>(size));
         vkUnmapMemory(m_context.device, staging.memory);
-        stbi_image_free(pixels);
+        
 
         VkImageCreateInfo ci{};
         ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;

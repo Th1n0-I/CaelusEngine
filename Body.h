@@ -23,6 +23,8 @@ namespace Caelus {
         std::optional<KeplerData> orbit;
         std::optional<double> gravParam;
         std::vector<Math::WorldPos> orbitPoints;
+        std::string texturePath;
+        int textureIndex = noParent;
     };
 } // Caelus
 
