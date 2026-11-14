@@ -20,6 +20,11 @@ FetchContent_Declare(tracy
         set(TRACY_ENABLE ON CACHE BOOL "Enable Tracy profiling" FORCE)
 FetchContent_MakeAvailable(tracy)
 
+FetchContent_Declare(stb
+        GIT_REPOSITORY https://github.com/nothings/stb.git
+        GIT_TAG master)
+FetchContent_MakeAvailable(stb)
+
 add_library(imgui STATIC
         ${imgui_SOURCE_DIR}/imgui.cpp
         ${imgui_SOURCE_DIR}/imgui_draw.cpp
@@ -54,8 +59,11 @@ add_executable(CaelusEngine main.cpp
         KeplerOrbit.cpp
         KeplerOrbit.h
         SolarSystem.cpp
-        SolarSystem.h)
+        SolarSystem.h
+        Textures.cpp
+        Textures.h)
 target_link_libraries(CaelusEngine PRIVATE glfw Vulkan::Vulkan imgui TracyClient)
+target_include_directories(CaelusEngine PRIVATE ${stb_SOURCE_DIR})
 
 find_program(GLSLC glslc HINTS "$ENV{VULKAN_SDK}/Bin")
 

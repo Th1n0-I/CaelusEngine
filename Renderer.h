@@ -15,6 +15,7 @@
 #include "Math/Math.h"
 #include "Vertex.h"
 #include "Mesh.h"
+#include "Textures.h"
 
 namespace Caelus {
     class Renderer {
@@ -45,6 +46,8 @@ namespace Caelus {
         Buffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, const void* data);
         void destroyBuffer(Buffer& buffer);
 
+        Textures::Texture createTexture(const char* path);
+        void destroyTexture(Textures::Texture& tex);
         Mesh createMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
         void destroyMesh(Mesh& mesh);
         static void drawMesh(VkCommandBuffer commandBuffer, Mesh& mesh);
@@ -63,6 +66,8 @@ namespace Caelus {
         VkPushConstantRange m_range;
         VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
         VkPipeline m_pipeline = VK_NULL_HANDLE;
+        VkDescriptorSetLayout m_textureSetLayout = VK_NULL_HANDLE;
+        VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
 
         uint32_t m_imageIndex = 0;
 

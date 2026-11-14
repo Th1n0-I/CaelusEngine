@@ -29,7 +29,7 @@ namespace Caelus {
 
     bool createPipeline(const VkShaderModule& vertModule, const VkShaderModule& fragModule, const VkDevice& device,
                         const VkFormat format, VkPipelineLayout& layout, VkPipeline& pipeline,
-                        VkPushConstantRange& range) {
+                        VkPushConstantRange& range, VkDescriptorSetLayout descriptorSetLayout) {
         VkPipelineShaderStageCreateInfo stages[2]{};
 
         stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -99,6 +99,8 @@ namespace Caelus {
 
         VkPipelineLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        layoutInfo.setLayoutCount = 1;
+        layoutInfo.pSetLayouts = &descriptorSetLayout;
 
         range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
         range.offset = 0;

@@ -21,6 +21,7 @@
 #include "Primitives.h"
 #include "KeplerOrbit.h"
 #include "SolarSystem.h"
+#include "stb_image.h"
 
 using namespace Caelus::Math;
 
@@ -44,7 +45,7 @@ static std::vector<char> readFile(const std::string& path) {
 
 void drawBodyTree(const std::vector<Caelus::Body>& bodies, int index, int& followIndex, Caelus::Camera& camera) {
     ImGui::PushID(index);
-    
+
     bool hasChildren = false;
     for (const auto& body : bodies) {
         if (body.parent == index) {
@@ -52,22 +53,20 @@ void drawBodyTree(const std::vector<Caelus::Body>& bodies, int index, int& follo
             break;
         }
     }
-    
+
     ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
     if (!hasChildren) flags |= ImGuiTreeNodeFlags_Leaf;
     if (index == followIndex) flags |= ImGuiTreeNodeFlags_Selected;
-    
+
     bool open = ImGui::TreeNodeEx(bodies[index].name.c_str(), flags | ImGuiTreeNodeFlags_Framed);
     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
         followIndex = index;
         camera.SetDistance(bodies[index].radius * 5);
     }
-    
+
     if (open) {
         for (int i = 0; i < bodies.size(); i++) {
-            if (bodies[i].parent == index) {
-                drawBodyTree(bodies, i, followIndex, camera);
-            }
+            if (bodies[i].parent == index) { drawBodyTree(bodies, i, followIndex, camera); }
         }
         ImGui::TreePop();
     }
@@ -134,6 +133,8 @@ int main() {
     Caelus::Mesh cubeMesh = renderer.createMesh(sphereMeshData.Vertices, sphereMeshData.Indices);
 
     auto bodies = Caelus::createSolarSystem();
+    
+    auto starTexture = renderer.createTexture("C:/Users/volts/Downloads/starmap_2020_16k.png");
 
     int followIndex = 3;
 
@@ -206,9 +207,7 @@ int main() {
             }
             if (ImGui::BeginMenu("Camera")) {
                 for (int i = 0; i < bodies.size(); i++) {
-                    if (bodies[i].parent == Caelus::Body::noParent) {
-                        drawBodyTree(bodies, i, followIndex, camera);
-                    }
+                    if (bodies[i].parent == Caelus::Body::noParent) { drawBodyTree(bodies, i, followIndex, camera); }
                 }
                 ImGui::DragFloat("Sensitivity", &sensitivity, 0.01f);
                 ImGui::EndMenu();
@@ -379,6 +378,7 @@ int main() {
         if (cmd == VK_NULL_HANDLE) continue;
 
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline());
+        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 0, 1, &starTexture.descriptorSet, 0, nullptr);
 
         Caelus::Consts consts{};
         consts.res[0] = static_cast<int>(renderer.swapChain().extent.width);
@@ -407,6 +407,16 @@ int main() {
                                    &consts);
                 Caelus::Renderer::drawMesh(cmd, cubeMesh);
             }
+            Matrix4x4 model = ::scale(Vector3(1e13f, 1e13f, 1e13f));
+            Matrix4x4 matrix = viewProj * model;
+            
+            for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) consts.matrix[i][j] = matrix.m[i][j];
+            consts.bodyPosRadius = {0, 0, 0, 1e13f};
+            consts.sunPosEmissive.w = 2;
+            vkCmdPushConstants(cmd, renderer.pipelineLayout(),
+                                   VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Caelus::Consts),
+                                   &consts);
+            Caelus::Renderer::drawMesh(cmd, cubeMesh);
         }
 
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
@@ -421,6 +431,7 @@ int main() {
 
     // Clean everything up
 
+    renderer.destroyTexture(starTexture);
     renderer.destroyMesh(cubeMesh);
 
     ImGui_ImplVulkan_Shutdown();

@@ -21,7 +21,7 @@ namespace Caelus {
     VkShaderModule createShaderModule(const VkDevice& device, const std::vector<char>& code);
     bool createPipeline(const VkShaderModule& vertModule, const VkShaderModule& fragModule, const VkDevice& device,
                         const VkFormat format, VkPipelineLayout& layout, VkPipeline& pipeline,
-                        VkPushConstantRange& range);
+                        VkPushConstantRange& range, VkDescriptorSetLayout descriptorSetLayout);
 } // Caelus
 
 #endif //CAELUSENGINE_PIPELINE_H

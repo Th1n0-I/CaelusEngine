@@ -7,6 +7,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <stb_image.h>
 #include <tracy/Tracy.hpp>
 
 #include "Buffer.h"
@@ -128,6 +129,177 @@ namespace Caelus {
         vkFreeCommandBuffers(m_context.device, m_commandPool, 1, &commandBuffer);
     }
 
+    Textures::Texture Renderer::createTexture(const char* path) {
+        Textures::Texture tex;
+
+        int width, height, channels;
+        stbi_uc* pixels = stbi_load(path, &width, &height, &channels, STBI_rgb_alpha);
+        if (!pixels) {
+            printf("stb failed: %s\n", stbi_failure_reason());
+            return {};
+        }
+
+        VkDeviceSize size = static_cast<VkDeviceSize>(width) * height * 4;
+        tex.width = static_cast<uint32_t>(width);
+        tex.height = static_cast<uint32_t>(height);
+
+        Buffer staging{};
+        if (!allocateBuffer(m_context, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, staging)) {
+            printf("Failed to allocate buffer!\n");
+            return {};
+        }
+
+        void* mapped = nullptr;
+        vkMapMemory(m_context.device, staging.memory, 0, size, 0, &mapped);
+        memcpy(mapped, pixels, static_cast<size_t>(size));
+        vkUnmapMemory(m_context.device, staging.memory);
+        stbi_image_free(pixels);
+
+        VkImageCreateInfo ci{};
+        ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        ci.imageType = VK_IMAGE_TYPE_2D;
+        ci.format = VK_FORMAT_R8G8B8A8_SRGB;
+        ci.extent = {.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height), .depth = 1};
+        ci.mipLevels = 1;
+        ci.arrayLayers = 1;
+        ci.samples = VK_SAMPLE_COUNT_1_BIT;
+        ci.tiling = VK_IMAGE_TILING_OPTIMAL;
+        ci.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+        ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        if (vkCreateImage(m_context.device, &ci, nullptr, &tex.image) != VK_SUCCESS) {
+            printf("Failed to create image!");
+            return {};
+        }
+
+        VkMemoryRequirements req;
+        vkGetImageMemoryRequirements(m_context.device, tex.image, &req);
+
+        VkMemoryAllocateInfo ai{};
+        ai.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        ai.allocationSize = req.size;
+        ai.memoryTypeIndex = findMemoryType(m_context.gpu, req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        if (vkAllocateMemory(m_context.device, &ai, nullptr, &tex.memory) != VK_SUCCESS) {
+            printf("Failed to allocate image memory!");
+            return {};
+        }
+
+        vkBindImageMemory(m_context.device, tex.image, tex.memory, 0);
+        
+        VkCommandBuffer cmd = beginOneTimeCommand();
+        
+        VkImageSubresourceRange subRange{
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1
+        };
+        
+        VkImageMemoryBarrier2 toTransfer{};
+        toTransfer.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+        toTransfer.srcStageMask = VK_PIPELINE_STAGE_2_NONE;
+        toTransfer.srcAccessMask = VK_ACCESS_2_NONE;
+        toTransfer.dstStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
+        toTransfer.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        toTransfer.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        toTransfer.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        toTransfer.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        toTransfer.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        toTransfer.image = tex.image;
+        toTransfer.subresourceRange = subRange;
+        
+        VkDependencyInfo dep{};
+        dep.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+        dep.imageMemoryBarrierCount = 1;
+        dep.pImageMemoryBarriers = &toTransfer;
+        vkCmdPipelineBarrier2(cmd, &dep);
+
+        VkBufferImageCopy region{};
+        region.bufferOffset = 0;
+        region.bufferRowLength = 0;
+        region.bufferImageHeight = 0;
+        region.imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1};
+        region.imageOffset = {0, 0, 0};
+        region.imageExtent = {tex.width, tex.height, 1};
+        vkCmdCopyBufferToImage(cmd, staging.handle, tex.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        
+        VkImageMemoryBarrier2 toShader = toTransfer;
+        toShader.srcStageMask = VK_PIPELINE_STAGE_2_COPY_BIT;
+        toShader.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        toShader.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+        toShader.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
+        toShader.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        toShader.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        
+        dep.pImageMemoryBarriers = &toShader;
+        vkCmdPipelineBarrier2(cmd, &dep);
+        
+        endOneTimeCommand(cmd);
+        destroyBuffer(staging);
+        
+        VkImageViewCreateInfo ici{};
+        ici.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        ici.image = tex.image;
+        ici.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        ici.format = VK_FORMAT_R8G8B8A8_SRGB;
+        ici.subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0,
+            .layerCount = 1
+        };
+
+        if (vkCreateImageView(m_context.device, &ici, nullptr, &tex.view) != VK_SUCCESS) {
+            printf("Failed to create image view!");
+            return {};
+        }
+        
+        VkSamplerCreateInfo sampler{};
+        sampler.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        sampler.magFilter = VK_FILTER_LINEAR;
+        sampler.minFilter = VK_FILTER_LINEAR;
+        sampler.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        sampler.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        sampler.maxLod = 0;
+        
+        vkCreateSampler(m_context.device, &sampler, nullptr, &tex.sampler);
+        
+        VkDescriptorSetAllocateInfo allocInfo{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .descriptorPool = m_descriptorPool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &m_textureSetLayout,
+        };
+        
+        VkDescriptorImageInfo imageInfo{
+            .sampler = tex.sampler,
+            .imageView = tex.view,
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        };
+        
+        vkAllocateDescriptorSets(m_context.device, &allocInfo, &tex.descriptorSet);
+        
+        VkWriteDescriptorSet writeDescriptorSet{
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .dstSet = tex.descriptorSet,
+            .dstBinding = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .pImageInfo = &imageInfo,
+        };
+        
+        
+        vkUpdateDescriptorSets(m_context.device, 1, &writeDescriptorSet, 0, nullptr);
+        
+        return tex;
+    }
+    
+    void Renderer::destroyTexture(Textures::Texture& tex) {
+        vkDestroySampler(m_context.device, tex.sampler, nullptr);
+        vkDestroyImageView(m_context.device, tex.view, nullptr);
+        vkDestroyImage(m_context.device, tex.image, nullptr);
+        vkFreeMemory(m_context.device, tex.memory, nullptr);
+        tex = {};
+    }
+
     Mesh Renderer::createMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices) {
         Mesh m;
         m.vertexBuffer = createBuffer(vertices.size() * sizeof(Vertex), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -205,9 +377,37 @@ namespace Caelus {
 
         VkShaderModule vertModule = createShaderModule(m_context.device, vertCode);
         VkShaderModule fragModule = createShaderModule(m_context.device, fragCode);
+        
+        VkDescriptorSetLayoutBinding binding{
+            .binding = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        };
+        
+        VkDescriptorSetLayoutCreateInfo layoutInfo{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .bindingCount = 1,
+            .pBindings = &binding,
+        };
+        
+        VkDescriptorPoolSize descriptorPoolSize{
+            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 16
+        };
+        
+        VkDescriptorPoolCreateInfo descriptorPoolInfo{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, 
+            .maxSets = 16, 
+            .poolSizeCount = 1,
+            .pPoolSizes = &descriptorPoolSize,
+        };
+        
+        vkCreateDescriptorPool(m_context.device, &descriptorPoolInfo, nullptr, &m_descriptorPool);
+        vkCreateDescriptorSetLayout(m_context.device, &layoutInfo, nullptr, &m_textureSetLayout);
 
         createPipeline(vertModule, fragModule, m_context.device, m_swapChain.format, m_pipelineLayout, m_pipeline,
-                       m_range);
+                       m_range, m_textureSetLayout);
 
         vkDestroyShaderModule(m_context.device, vertModule, nullptr);
         vkDestroyShaderModule(m_context.device, fragModule, nullptr);
@@ -215,14 +415,14 @@ namespace Caelus {
 
     VkCommandBuffer Renderer::beginFrame(const float clearColor[4]) {
         {
-            
             ZoneScopedN("Wait (vsync/GPU)");
             vkWaitForFences(m_context.device, 1, &m_inFlight, VK_TRUE, UINT64_MAX);
-            if (vkAcquireNextImageKHR(m_context.device, m_swapChain.handle, UINT64_MAX, m_imageAvailable, VK_NULL_HANDLE,
+            if (vkAcquireNextImageKHR(m_context.device, m_swapChain.handle, UINT64_MAX, m_imageAvailable,
+                                      VK_NULL_HANDLE,
                                       &m_imageIndex) == VK_ERROR_OUT_OF_DATE_KHR) {
                 resizeSwapChain(m_window);
                 return VK_NULL_HANDLE;
-                                      }
+            }
         }
 
         vkResetFences(m_context.device, 1, &m_inFlight);
@@ -394,6 +594,9 @@ namespace Caelus {
         for (const VkImageView v : m_swapChain.views) vkDestroyImageView(m_context.device, v, nullptr);
         vkDestroySwapchainKHR(m_context.device, m_swapChain.handle, nullptr);
 
+        vkDestroyDescriptorPool(m_context.device, m_descriptorPool, nullptr);
+        vkDestroyDescriptorSetLayout(m_context.device, m_textureSetLayout, nullptr);
+        
         vkDestroyPipeline(m_context.device, m_pipeline, nullptr);
         vkDestroyPipelineLayout(m_context.device, m_pipelineLayout, nullptr);
 
