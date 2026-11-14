@@ -57,7 +57,7 @@ void drawBodyTree(const std::vector<Caelus::Body>& bodies, int index, int& follo
     if (!hasChildren) flags |= ImGuiTreeNodeFlags_Leaf;
     if (index == followIndex) flags |= ImGuiTreeNodeFlags_Selected;
     
-    bool open = ImGui::TreeNodeEx(bodies[index].name.c_str(), flags);
+    bool open = ImGui::TreeNodeEx(bodies[index].name.c_str(), flags | ImGuiTreeNodeFlags_Framed);
     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen()) {
         followIndex = index;
         camera.SetDistance(bodies[index].radius * 5);
@@ -210,33 +210,15 @@ int main() {
                         drawBodyTree(bodies, i, followIndex, camera);
                     }
                 }
+                ImGui::DragFloat("Sensitivity", &sensitivity, 0.01f);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Simulation")) {
+                ImGui::DragScalarN("TimeScale", ImGuiDataType_Double, &timeScale, 1, 0.01f);
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
         }
-
-        ImGui::Begin("Caelus");
-        ImGui::Text("%.1f FPS", io.Framerate);
-
-        for (int i = 0; i < bodies.size(); i++) {
-            ImGui::PushID(i);
-            if (ImGui::CollapsingHeader(bodies[i].name.c_str())) {
-                ImGui::DragScalarN(bodies[i].name.c_str(), ImGuiDataType_Double, &bodies[i].localPosition.x, 3, 0.01f);
-                ImGui::DragFloat("Scale", &bodies[i].radius, 0.01f);
-            }
-            ImGui::PopID();
-        }
-
-        if (ImGui::CollapsingHeader("Camera")) {
-            ImGui::DragScalarN("Position", ImGuiDataType_Double, &camera.GetPosition().x, 3, 0.01f);
-            ImGui::DragFloat("Pitch", &camera.GetPitch(), 0.01f);
-            ImGui::DragFloat("Yaw", &camera.GetYaw(), 0.01f);
-            ImGui::DragFloat("Sensitivity", &sensitivity, 0.01f);
-        }
-        ImGui::DragScalarN("TimeScale", ImGuiDataType_Double, &timeScale, 1, 0.01f);
-        ImGui::Separator();
-
-        ImGui::End();
 
         {
             ZoneScopedN("Orbit movement");
