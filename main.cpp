@@ -28,6 +28,7 @@ using namespace Caelus::Math;
 struct AtmosphereConstants {
     Vector4 BodyPositionRadius;
     Vector4 FOVRayleigh;
+    Vector4 absorbtionSunPos;
     float res[2];
     float camera[2];
 };
@@ -175,7 +176,7 @@ int main() {
     struct OrbitRange { uint32_t first, count; };
     std::vector<OrbitRange> orbitRanges;
 
-    double time = 0, timeScale = 1;
+    double time = 0, timeScale = 1, absorbtion = 0.00003;
     std::string overlayText;
     float overlayTimer = 0.0f;
     while (!glfwWindowShouldClose(window)) {
@@ -254,6 +255,10 @@ int main() {
             }
             if (ImGui::BeginMenu("Simulation")) {
                 ImGui::DragScalarN("TimeScale", ImGuiDataType_Double, &timeScale, 1, 0.01f);
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("AtmosDebug")) {
+                ImGui::DragScalarN("Absorbtion", ImGuiDataType_Double, &absorbtion, 1, 0.00000001f);
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
@@ -444,6 +449,7 @@ int main() {
             AtmosphereConstants atmosConstants{};
             atmosConstants.BodyPositionRadius = {earthRenderPos.x, earthRenderPos.y, earthRenderPos.z, bodies[3].radius};
             atmosConstants.FOVRayleigh = {camera.GetFov(), 0.0f, 0.0f, 0.0f};
+            atmosConstants.absorbtionSunPos = {static_cast<float>(absorbtion), sunRenderPos.x, sunRenderPos.y, sunRenderPos.z};
             atmosConstants.camera[0] = camera.GetPitch();
             atmosConstants.camera[1] = camera.GetYaw();
             atmosConstants.res[0] = (renderer.swapChain().extent.width);

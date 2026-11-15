@@ -379,6 +379,7 @@ namespace Caelus {
             .vertexStride = 0,
             .depthTest = false,
             .depthWrite = false,
+            .alphaBlend = true,
             .pushConstantSize = constsSize,
             .setLayouts = {m_textureSetLayout},
         };
