@@ -28,7 +28,7 @@ using namespace Caelus::Math;
 struct AtmosphereConstants {
     Vector4 BodyPositionRadius;
     Vector4 FOVRayleigh;
-    Vector4 absorbtionSunPos;
+    Vector4 intensitySunPos;
     float res[2];
     float camera[2];
 };
@@ -79,6 +79,46 @@ void drawBodyTree(const std::vector<Caelus::Body>& bodies, int index, int& follo
         ImGui::TreePop();
     }
     ImGui::PopID();
+}
+
+Vector2 raySphereIntersect(Vector3 rayDir, Vector3 rayStart, float sphereRadius){
+    Vector3 sphereCenter = {0,0,0};
+    rayStart = rayStart / 1000;
+    sphereRadius /= 1000;
+    rayDir = normalize(rayDir);
+    float b = dot(rayDir * 2, (rayStart - sphereCenter));
+    float c = dot(rayStart - sphereCenter, rayStart - sphereCenter) - sphereRadius * sphereRadius;
+    float disc = b * b - 4 * c;
+    if(disc <= 0) return {0, 0};
+    float t1 = (-b + sqrt(disc)) / 2 * 1000;
+    float t2 = (-b - sqrt(disc)) / 2 * 1000;
+    return {std::min(t1, t2), std::max(t1, t2)};
+}
+
+float densityAtPoint(float height){
+    float height01 = height / 8000;
+    float localDensity = expf(-std::max(height01, 0.0f));
+    return localDensity;
+}
+
+float GetOpticalDepth(float height, float cosine) {
+    Vector3 startPos = {0, height + 6371000, 0};
+    Vector3 direction = normalize(Vector3{sqrtf(1 - cosine * cosine), cosine, 0}) ;
+    
+    auto innerIntersect = raySphereIntersect(direction, startPos, 6371000);
+    auto outerIntersect = raySphereIntersect(direction, startPos, 6371000 + 100000);
+    float exit = outerIntersect.y;
+    
+    
+    float stepSize = exit / 32;
+    float opticalDepth = 0;
+    
+    for(int i = 0; i < 32; i++){
+        float localDensity = densityAtPoint(startPos.length() - 6371000);
+        opticalDepth += localDensity * stepSize;
+        startPos += direction * stepSize;
+    }
+    return opticalDepth;
 }
 
 int main() {
@@ -166,8 +206,25 @@ int main() {
     }
     
     unsigned char white[4] = {255, 255, 255, 255};
-    auto whiteTexture = renderer.createTexture(white, 1, 1);
+    auto whiteTexture = renderer.createTexture(white, 1, 1, VK_FORMAT_R8G8B8A8_SRGB, 4, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
     auto starTexture = renderer.createTexture("C:/Users/volts/Downloads/starmap_2020_16k.png");
+    
+    Caelus::Textures::Texture atmoLUT;
+    {
+        ZoneScopedN("OpticalDepthLUT");
+        std::vector<float> data;
+        data.reserve(256 * 64);
+        data.resize(256 * 64);
+        for (int w = 0; w < 256; w++) {
+            for (int h = 0; h < 64; h++) {
+                float height = (w + 0.5) / 256.0f * 100000;
+                float cos = (h + 0.5) / 64.0f * 2 - 1;
+                float value = GetOpticalDepth(height, cos);
+                data[w + h * 256] = value;
+            }
+        }
+        atmoLUT = renderer.createTexture(data.data(), 256, 64, VK_FORMAT_R32_SFLOAT, 4, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    }
 
     int followIndex = 3;
 
@@ -176,7 +233,7 @@ int main() {
     struct OrbitRange { uint32_t first, count; };
     std::vector<OrbitRange> orbitRanges;
 
-    double time = 0, timeScale = 1, absorbtion = 0.00003;
+    double time = 0, timeScale = 1, sunIntensity = 1;
     std::string overlayText;
     float overlayTimer = 0.0f;
     while (!glfwWindowShouldClose(window)) {
@@ -258,7 +315,7 @@ int main() {
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("AtmosDebug")) {
-                ImGui::DragScalarN("Absorbtion", ImGuiDataType_Double, &absorbtion, 1, 0.00000001f);
+                ImGui::DragScalarN("Sun Intensity", ImGuiDataType_Double, &sunIntensity, 1, 0.1f);
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
@@ -302,7 +359,7 @@ int main() {
                 else body.worldPosition = bodies[body.parent].worldPosition + body.localPosition;
             }
 
-            camera.Follow(bodies[followIndex].worldPosition);
+            camera.Follow(bodies[followIndex].worldPosition + WorldPos{ bodies[followIndex].radius + 1000, 0, 0});
         }
         const float aspect = static_cast<float>(renderer.swapChain().extent.width)
             / static_cast<float>(renderer.swapChain().extent.height);
@@ -445,16 +502,17 @@ int main() {
                 vkCmdDraw(cmd, r.count, 1, r.first, 0);
         }
         {
+            ZoneScopedN("Atmosphere Rendering");
             auto earthRenderPos = toRenderSpace(bodies[3].worldPosition, camera.GetPosition());
             AtmosphereConstants atmosConstants{};
             atmosConstants.BodyPositionRadius = {earthRenderPos.x, earthRenderPos.y, earthRenderPos.z, bodies[3].radius};
-            atmosConstants.FOVRayleigh = {camera.GetFov(), 0.0f, 0.0f, 0.0f};
-            atmosConstants.absorbtionSunPos = {static_cast<float>(absorbtion), sunRenderPos.x, sunRenderPos.y, sunRenderPos.z};
+            atmosConstants.FOVRayleigh = {camera.GetFov(), 5.8e-6, 13.5e-6, 33.1e-6};
+            atmosConstants.intensitySunPos = {static_cast<float>(sunIntensity), sunRenderPos.x, sunRenderPos.y, sunRenderPos.z};
             atmosConstants.camera[0] = camera.GetPitch();
             atmosConstants.camera[1] = camera.GetYaw();
             atmosConstants.res[0] = (renderer.swapChain().extent.width);
             atmosConstants.res[1] = (renderer.swapChain().extent.height);
-            renderer.DrawFullScreenShader(atmosphereShader, &atmosConstants);
+            renderer.DrawFullScreenShader(atmosphereShader, &atmosConstants, atmoLUT);
         }
         
 

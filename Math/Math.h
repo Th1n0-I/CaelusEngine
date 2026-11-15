@@ -34,6 +34,13 @@ namespace Caelus::Math {
         Vector3 operator/(const float& b) const { return {.x = x / b, .y = y / b, .z = z / b}; }
         Vector3 operator/(const Vector3& b) const { return {.x = x / b.x, .y = y / b.y, .z = z / b.z}; }
         [[nodiscard]] float length() const { return sqrtf(x * x + y * y + z * z); }
+        
+        Vector3& operator+=(const Vector3& b) {
+            x += b.x;
+            y += b.y;
+            z += b.z;
+            return *this;
+        }
     };
 
     static float dot(const Vector3& a, const Vector3& b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
@@ -49,6 +56,7 @@ namespace Caelus::Math {
         Vector2 operator*(const Vector2& b) const { return {.x = x * b.x, .y = y * b.y}; }
         Vector2 operator/(const float& b) const { return {.x = x / b, .y = y / b}; }
         Vector2 operator/(const Vector2& b) const { return {.x = x / b.x, .y = y / b.y}; }
+        bool operator==(const Vector2& b) const {return x == b.x && y == b.y; }
 
         Vector2& operator+=(const Vector2& b) {
             x += b.x;

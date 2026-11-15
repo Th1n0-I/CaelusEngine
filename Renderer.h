@@ -53,7 +53,7 @@ namespace Caelus {
         void destroyBuffer(Buffer& buffer) const;
 
         Textures::Texture createTexture(const char* path);
-        Textures::Texture createTexture(const unsigned char* pixels, int width, int height);
+        Textures::Texture createTexture(const void* pixels, int width, int height, VkFormat format, uint32_t bytesPerTexel, VkSamplerAddressMode addressU, VkSamplerAddressMode addressV);
         void destroyTexture(Textures::Texture& tex);
         Mesh createMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
         void destroyMesh(Mesh& mesh);
@@ -61,6 +61,7 @@ namespace Caelus {
         
         FullScreenShader createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize);
         void DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants) const;
+        void DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants, Textures::Texture tex) const;
 
     private:
         GLFWwindow* m_window = nullptr;

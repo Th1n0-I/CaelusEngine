@@ -172,16 +172,16 @@ namespace Caelus {
             return {};
         }
 
-        const Textures::Texture tex = createTexture(pixels, width, height);
+        const Textures::Texture tex = createTexture(pixels, width, height, VK_FORMAT_R8G8B8A8_SRGB, 4, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE);
         
         stbi_image_free(pixels);
         
         return tex;
     }
     
-    Textures::Texture Renderer::createTexture(const unsigned char* pixels, int width, int height) {
+    Textures::Texture Renderer::createTexture(const void* pixels, int width, int height, VkFormat format, uint32_t bytesPerTexel, VkSamplerAddressMode addressU, VkSamplerAddressMode addressV) {
         Textures::Texture tex;
-        VkDeviceSize size = static_cast<VkDeviceSize>(width) * height * 4;
+        VkDeviceSize size = static_cast<VkDeviceSize>(width) * height * bytesPerTexel;
         tex.width = static_cast<uint32_t>(width);
         tex.height = static_cast<uint32_t>(height);
 
@@ -201,7 +201,7 @@ namespace Caelus {
         VkImageCreateInfo ci{};
         ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         ci.imageType = VK_IMAGE_TYPE_2D;
-        ci.format = VK_FORMAT_R8G8B8A8_SRGB;
+        ci.format = format;
         ci.extent = {.width = static_cast<uint32_t>(width), .height = static_cast<uint32_t>(height), .depth = 1};
         ci.mipLevels = 1;
         ci.arrayLayers = 1;
@@ -282,7 +282,7 @@ namespace Caelus {
         ici.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         ici.image = tex.image;
         ici.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        ici.format = VK_FORMAT_R8G8B8A8_SRGB;
+        ici.format = format;
         ici.subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0,
             .layerCount = 1
@@ -394,6 +394,12 @@ namespace Caelus {
         if (shader.pushSize > 0)
             vkCmdPushConstants(m_cmd, shader.layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, shader.pushSize, pushConstants);
         vkCmdDraw(m_cmd, 3, 1, 0, 0);
+    }
+
+    void Renderer::DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants,
+        Textures::Texture tex) const {
+        vkCmdBindDescriptorSets(m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, shader.layout, 0, 1, &tex.descriptorSet, 0, nullptr);
+        DrawFullScreenShader(shader, pushConstants);
     }
 
     Renderer::Renderer(GLFWwindow* window, std::vector<char> vertCode, std::vector<char> fragCode, std::vector<char> lineVertCode, std::vector<char> lineFragCode) : m_window(window) {
