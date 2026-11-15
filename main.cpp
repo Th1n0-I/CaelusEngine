@@ -25,6 +25,13 @@
 
 using namespace Caelus::Math;
 
+struct AtmosphereConstants {
+    Vector4 BodyPositionRadius;
+    Vector4 FOVRayleigh;
+    float res[2];
+    float camera[2];
+};
+
 static std::vector<char> readFile(const std::string& path) {
     // Get the file
     std::ifstream file(path, std::ios::ate | std::ios::binary);
@@ -71,76 +78,6 @@ void drawBodyTree(const std::vector<Caelus::Body>& bodies, int index, int& follo
         ImGui::TreePop();
     }
     ImGui::PopID();
-}
-
-bool clipLine(Vector4& startPos, Vector4& endPos) {
-    if ((startPos.w - startPos.z) < 0.0f && (endPos.w - endPos.z) < 0.0f) return false;
-    if (startPos.w + startPos.x < 0.0f && endPos.w + endPos.x < 0.0f) return false;
-    if (startPos.w - startPos.x < 0.0f && endPos.w - endPos.x < 0.0f) return false;
-    if (startPos.w + startPos.y < 0.0f && endPos.w + endPos.y < 0.0f) return false;
-    if (startPos.w - startPos.y < 0.0f && endPos.w - endPos.y < 0.0f) return false;
-
-    if (startPos.w - startPos.z < 0.0f) {
-        float dS = startPos.w - startPos.z;
-        float dE = endPos.w - endPos.z;
-        float t = dS / (dS - dE);
-        startPos = startPos + (endPos - startPos) * t;
-    }
-    if (endPos.w - endPos.z < 0.0f) {
-        float dS = startPos.w - startPos.z;
-        float dE = endPos.w - endPos.z;
-        float t = dE / (dE - dS);
-        endPos = endPos + (startPos - endPos) * t;
-    }
-    if (startPos.w + startPos.x < 0.0f) {
-        float dS = startPos.w + startPos.x;
-        float dE = endPos.w + endPos.x;
-        float t = dS / (dS - dE);
-        startPos = startPos + (endPos - startPos) * t;
-    }
-    if (endPos.w + endPos.x < 0.0f) {
-        float dS = startPos.w + startPos.x;
-        float dE = endPos.w + endPos.x;
-        float t = dE / (dE - dS);
-        endPos = endPos + (startPos - endPos) * t;
-    }
-    if (startPos.w - startPos.x < 0.0f) {
-        float dS = startPos.w - startPos.x;
-        float dE = endPos.w - endPos.x;
-        float t = dS / (dS - dE);
-        startPos = startPos + (endPos - startPos) * t;
-    }
-    if (endPos.w - endPos.x < 0.0f) {
-        float dS = startPos.w - startPos.x;
-        float dE = endPos.w - endPos.x;
-        float t = dE / (dE - dS);
-        endPos = endPos + (startPos - endPos) * t;
-    }
-    if (startPos.w + startPos.y < 0.0f) {
-        float dS = startPos.w + startPos.y;
-        float dE = endPos.w + endPos.y;
-        float t = dS / (dS - dE);
-        startPos = startPos + (endPos - startPos) * t;
-    }
-    if (endPos.w + endPos.y < 0.0f) {
-        float dS = startPos.w + startPos.y;
-        float dE = endPos.w + endPos.y;
-        float t = dE / (dE - dS);
-        endPos = endPos + (startPos - endPos) * t;
-    }
-    if (startPos.w - startPos.y < 0.0f) {
-        float dS = startPos.w - startPos.y;
-        float dE = endPos.w - endPos.y;
-        float t = dS / (dS - dE);
-        startPos = startPos + (endPos - startPos) * t;
-    }
-    if (endPos.w - endPos.y < 0.0f) {
-        float dS = startPos.w - startPos.y;
-        float dE = endPos.w - endPos.y;
-        float t = dE / (dE - dS);
-        endPos = endPos + (startPos - endPos) * t;
-    }
-    return true;
 }
 
 int main() {
@@ -200,13 +137,25 @@ int main() {
     double lastX, lastY;
     bool looking = false;
 
-    Caelus::MeshData sphereMeshData = Caelus::createCubeSphere(16);
+    Caelus::MeshData sphereMeshData = Caelus::createCubeSphere(128);
 
     Caelus::Mesh cubeMesh = renderer.createMesh(sphereMeshData.Vertices, sphereMeshData.Indices);
 
     auto bodies = Caelus::createSolarSystem();
     
     std::vector<Caelus::Textures::Texture> textures;
+    
+    
+    Caelus::FullScreenShader atmosphereShader;
+    
+    
+    {
+        auto code = readFile("shaders/Atmosphere.frag.spv");
+        atmosphereShader = renderer.createFullScreenShader(code, sizeof(AtmosphereConstants));
+    }
+    
+    
+    
     
     for (auto& body : bodies) {
         if (body.texturePath.empty()) continue;
@@ -475,18 +424,32 @@ int main() {
                 Caelus::Renderer::drawMesh(cmd, cubeMesh);
             }
         }
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.linePipeline());
+        {
+            ZoneScopedN("OrbitLine Rendering");
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.linePipeline());
         
-        VkDeviceSize lineOffset = 0;
-        vkCmdBindVertexBuffers(cmd, 0, 1, &lineBuffer.handle, &lineOffset);
+            VkDeviceSize lineOffset = 0;
+            vkCmdBindVertexBuffers(cmd, 0, 1, &lineBuffer.handle, &lineOffset);
         
-        Caelus::LineConsts lineConsts{};
-        for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) lineConsts.viewProj[i][j] = viewProj.m[i][j];
-        lineConsts.color = {1.0f, 1.0f, 1.0f, 0.4f};
-        vkCmdPushConstants(cmd, renderer.linePipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(lineConsts), &lineConsts);
+            Caelus::LineConsts lineConsts{};
+            for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) lineConsts.viewProj[i][j] = viewProj.m[i][j];
+            lineConsts.color = {1.0f, 1.0f, 1.0f, 0.4f};
+            vkCmdPushConstants(cmd, renderer.linePipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(lineConsts), &lineConsts);
         
-        for (const auto& r : orbitRanges)
-            vkCmdDraw(cmd, r.count, 1, r.first, 0);
+            for (const auto& r : orbitRanges)
+                vkCmdDraw(cmd, r.count, 1, r.first, 0);
+        }
+        {
+            auto earthRenderPos = toRenderSpace(bodies[3].worldPosition, camera.GetPosition());
+            AtmosphereConstants atmosConstants{};
+            atmosConstants.BodyPositionRadius = {earthRenderPos.x, earthRenderPos.y, earthRenderPos.z, bodies[3].radius};
+            atmosConstants.FOVRayleigh = {camera.GetFov(), 0.0f, 0.0f, 0.0f};
+            atmosConstants.camera[0] = camera.GetPitch();
+            atmosConstants.camera[1] = camera.GetYaw();
+            atmosConstants.res[0] = (renderer.swapChain().extent.width);
+            atmosConstants.res[1] = (renderer.swapChain().extent.height);
+            renderer.DrawFullScreenShader(atmosphereShader, &atmosConstants);
+        }
         
 
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);

@@ -20,6 +20,7 @@ namespace Caelus {
         void Follow(const Math::WorldPos& target);
         double& GetDistance() { return m_distance; }
         void SetDistance(const double distance) { m_distance = distance; }
+        float GetFov() const { return m_fov; }
 
     private:
         Math::WorldPos m_position{};

@@ -7,6 +7,8 @@
 
 #include <cstdio>
 #include <cstring>
+#include <fstream>
+#include <ios>
 #include <stb_image.h>
 #include <tracy/Tracy.hpp>
 
@@ -15,6 +17,25 @@
 
 
 namespace Caelus {
+    static std::vector<char> readFile(const std::string& path) {
+        // Get the file
+        std::ifstream file(path, std::ios::ate | std::ios::binary);
+        if (!file.is_open()) {
+            printf("Failed to open %s\n", path.c_str());
+            return {};
+        }
+
+        // Get the size of the file
+        const size_t fileSize = (size_t)file.tellg();
+        std::vector<char> buffer(fileSize);
+
+        // Return the file contents
+        file.seekg(0);
+        file.read(buffer.data(), static_cast<std::streamsize>(fileSize));
+        return buffer;
+    }
+    
+    
     void Renderer::resizeSwapChain(GLFWwindow* window) {
         int width = 0, height = 0;
         glfwGetFramebufferSize(window, &width, &height);
@@ -143,6 +164,7 @@ namespace Caelus {
     }
 
     Textures::Texture Renderer::createTexture(const char* path) {
+        ZoneScoped;
         int width, height, channels;
         stbi_uc* pixels = stbi_load(path, &width, &height, &channels, STBI_rgb_alpha);
         if (!pixels) {
@@ -341,6 +363,36 @@ namespace Caelus {
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &mesh.vertexBuffer.handle, &offset);
         vkCmdBindIndexBuffer(commandBuffer, mesh.indexBuffer.handle, 0, VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
+    }
+
+    FullScreenShader Renderer::createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize) {
+        FullScreenShader s;
+        s.pushSize = constsSize;
+        
+        const auto vertCode = readFile("shaders/Fullscreen.vert.spv");
+        const auto vertModule = createShaderModule(m_context.device, vertCode);
+        const auto fragModule = createShaderModule(m_context.device, fragCode);
+
+        const PipelineDesc desc{
+            .vert = vertModule,
+            .frag = fragModule,
+            .vertexStride = 0,
+            .depthTest = false,
+            .depthWrite = false,
+            .pushConstantSize = constsSize,
+            .setLayouts = {m_textureSetLayout},
+        };
+        
+        createPipeline(m_context.device, m_swapChain.format, desc, s.layout, s.pipeline);
+        
+        return s;
+    }
+
+    void Renderer::DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants) const {
+        vkCmdBindPipeline(m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, shader.pipeline);
+        if (shader.pushSize > 0)
+            vkCmdPushConstants(m_cmd, shader.layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, shader.pushSize, pushConstants);
+        vkCmdDraw(m_cmd, 3, 1, 0, 0);
     }
 
     Renderer::Renderer(GLFWwindow* window, std::vector<char> vertCode, std::vector<char> fragCode, std::vector<char> lineVertCode, std::vector<char> lineFragCode) : m_window(window) {

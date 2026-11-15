@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "Buffer.h"
+#include "FullScreenShader.h"
 #include "SwapChain.h"
 #include "VulkanContext.h"
 #include "Math/Math.h"
@@ -57,6 +58,9 @@ namespace Caelus {
         Mesh createMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
         void destroyMesh(Mesh& mesh);
         static void drawMesh(VkCommandBuffer commandBuffer, Mesh& mesh);
+        
+        FullScreenShader createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize);
+        void DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants) const;
 
     private:
         GLFWwindow* m_window = nullptr;

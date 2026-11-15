@@ -4,8 +4,12 @@
 
 #include "Primitives.h"
 
+#include "tracy/Tracy.hpp"
+
 namespace Caelus {
     MeshData createCubeSphere(int resolution) {
+        ZoneScoped;
+        
         MeshData md{};
         const int R = resolution + 1;
 

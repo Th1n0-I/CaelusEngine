@@ -41,23 +41,27 @@ namespace Caelus {
         stages[1].module = desc.frag;
         stages[1].pName = "main";
 
-        VkVertexInputBindingDescription binding{};
-        binding.binding = 0;
-        binding.stride = desc.vertexStride;
-        binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
         VkVertexInputAttributeDescription posAttr{};
         posAttr.location = 0;
         posAttr.binding = 0;
         posAttr.format = VK_FORMAT_R32G32B32_SFLOAT;
         posAttr.offset = 0;
-
+        
+        VkVertexInputBindingDescription binding{};
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexBindingDescriptionCount = 1;
-        vertexInputInfo.pVertexBindingDescriptions = &binding;
-        vertexInputInfo.vertexAttributeDescriptionCount = 1;
-        vertexInputInfo.pVertexAttributeDescriptions = &posAttr;
+        
+        if (desc.vertexStride != 0) {
+            binding.binding = 0;
+            binding.stride = desc.vertexStride;
+            binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+            
+            
+            vertexInputInfo.vertexBindingDescriptionCount = 1;
+            vertexInputInfo.vertexAttributeDescriptionCount = 1;
+            vertexInputInfo.pVertexAttributeDescriptions = &posAttr;
+            vertexInputInfo.pVertexBindingDescriptions = &binding;
+        }
 
         VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
         inputAssemblyInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -113,8 +117,8 @@ namespace Caelus {
         range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
         range.offset = 0;
         range.size = desc.pushConstantSize;
-        layoutInfo.pushConstantRangeCount = 1;
-        layoutInfo.pPushConstantRanges = &range;
+        layoutInfo.pushConstantRangeCount = desc.pushConstantSize > 0 ? 1 : 0;
+        layoutInfo.pPushConstantRanges = desc.pushConstantSize > 0 ? &range : nullptr;
 
         vkCreatePipelineLayout(device, &layoutInfo, nullptr, &layout);
 

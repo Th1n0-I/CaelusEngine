@@ -61,7 +61,9 @@ add_executable(CaelusEngine main.cpp
         SolarSystem.cpp
         SolarSystem.h
         Textures.cpp
-        Textures.h)
+        Textures.h
+        FullScreenShader.cpp
+        FullScreenShader.h)
 target_link_libraries(CaelusEngine PRIVATE glfw Vulkan::Vulkan imgui TracyClient)
 target_include_directories(CaelusEngine PRIVATE ${stb_SOURCE_DIR})
 
@@ -83,3 +85,5 @@ add_shader(CaelusEngine triangle.vert)
 add_shader(CaelusEngine triangle.frag)
 add_shader(CaelusEngine Line.vert)
 add_shader(CaelusEngine Line.frag)
+add_shader(CaelusEngine Fullscreen.vert)
+add_shader(CaelusEngine Atmosphere.frag)
