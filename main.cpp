@@ -233,7 +233,7 @@ int main() {
     struct OrbitRange { uint32_t first, count; };
     std::vector<OrbitRange> orbitRanges;
 
-    double time = 0, timeScale = 1, sunIntensity = 1;
+    double time = 0, timeScale = 1, sunIntensity = 16.8;
     std::string overlayText;
     float overlayTimer = 0.0f;
     while (!glfwWindowShouldClose(window)) {

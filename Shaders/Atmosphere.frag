@@ -54,6 +54,7 @@ vec2 raySphereIntersect(vec3 rayDir, vec3 rayStart, float sphereRadius){
 vec2 getDoubleSphereIntersect(vec2 big, vec2 small){
     
     if(big == vec2(0, 0)) return vec2(0, 0);
+    if(big.y <= 0) return vec2(0, 0);
     if(small == vec2(0, 0)) {
         if(big.x < 0) return vec2(0, big.y);
         else return big;
@@ -84,28 +85,27 @@ vec3 opticalDepth(vec3 rayOrigin, vec3 rayDir, float rayLength){
     return opticalDepth * pc.FOVRayleigh.yzw;
 }
 
+float phase(float cosTheta){
+    return 3.0 / (16.0 * 3.1415926535) * (1.0 + cosTheta * cosTheta);
+}
+
 void main(){
     outColor = vec4(0, 0, 0, 1);
     vec3 raydir = getRayDirection();
+    float phaseR = phase(dot(raydir, normalize(pc.intensitySunPos.yzw )));
     float planetRadius = pc.BodyPositionRadius.w;
     vec2 innerIntersect = raySphereIntersect(raydir, vec3(0, 0, 0), planetRadius);
     vec2 outerIntersect = raySphereIntersect(raydir, vec3(0, 0, 0), planetRadius + 100000);
     vec2 Intersect = getDoubleSphereIntersect(outerIntersect, innerIntersect);
     if(Intersect == vec2(0, 0)) return;
-    
     float stepSize = (Intersect.y - Intersect.x) / 64;
     vec3 inScatteredLight = vec3(0, 0, 0);
     float sumTransmittance = 1;
     float viewRayOpticalDepth = 0;
     for(int i = 0; i < 64; i++){
-        vec3 pos;
-        if (i * stepSize + stepSize / 2 > Intersect.y - Intersect.x) pos = raydir * Intersect.y;
-        else pos = raydir * (i * stepSize + Intersect.x + stepSize / 2);
+        vec3 pos = raydir * (i * stepSize + Intersect.x + stepSize / 2);
         vec3 sunDir = normalize(pc.intensitySunPos.yzw - pos);
         vec2 sunInnerIntersect = raySphereIntersect(sunDir, pos, planetRadius);
-        vec2 sunOuterIntersect = raySphereIntersect(sunDir, pos, planetRadius + 100000);
-        vec2 sunRayIntersect = getDoubleSphereIntersect(sunOuterIntersect, sunInnerIntersect);
-        float sunRayLength = sunRayIntersect.y - sunRayIntersect.x;
         vec2 LUTuv = vec2((distance(pos, pc.BodyPositionRadius.xyz) - pc.BodyPositionRadius.w) / 100000, dot(normalize(pos - pc.BodyPositionRadius.xyz), sunDir) * 0.5 + 0.5);
         vec3 sunRayOpticalDepth = texture(sunRayLUT, LUTuv).r * pc.FOVRayleigh.yzw;
         float localDensity = densityAtPoint(pos);
@@ -114,5 +114,5 @@ void main(){
         sumTransmittance *= exp(-stepSize * localDensity * ((pc.FOVRayleigh.y + pc.FOVRayleigh.z + pc.FOVRayleigh.w) / 3));
         if(sunInnerIntersect == vec2(0, 0) || sunInnerIntersect.x < 0) inScatteredLight += localDensity * transmittance * stepSize * pc.FOVRayleigh.yzw * pc.intensitySunPos.x;
     }
-    outColor = vec4(inScatteredLight, sumTransmittance);
+    outColor = vec4(inScatteredLight * phaseR, sumTransmittance);
 }
