@@ -9,6 +9,8 @@ layout(push_constant) uniform Consts{
     vec4 intensitySunPos;
     float res[2];
     float camera[2];
+    float atmosphereHeight;
+    float scaleHeight;
 } pc;
 
 layout(set = 0, binding = 0) uniform sampler2D sunRayLUT;
@@ -38,16 +40,14 @@ vec3 getRayDirection(){
 }
 
 vec2 raySphereIntersect(vec3 rayDir, vec3 rayStart, float sphereRadius){
-    vec3 sphereCenter = pc.BodyPositionRadius.xyz / 1000;
-    rayStart /= 1000;
-    sphereRadius /= 1000;
+    vec3 sphereCenter = pc.BodyPositionRadius.xyz;
     rayDir = normalize(rayDir);
     float b = dot(2 * rayDir, (rayStart - sphereCenter));
     float c = dot(rayStart - sphereCenter, rayStart - sphereCenter) - sphereRadius * sphereRadius;
     float disc = b * b - 4 * c;
     if(disc <= 0) return vec2(0, 0);
-    float t1 = (-b + sqrt(disc)) / 2 * 1000;
-    float t2 = (-b - sqrt(disc)) / 2 * 1000;
+    float t1 = (-b + sqrt(disc)) / 2;
+    float t2 = (-b - sqrt(disc)) / 2;
     return vec2(min(t1, t2), max(t1, t2));
 }
 
@@ -67,7 +67,7 @@ vec2 getDoubleSphereIntersect(vec2 big, vec2 small){
 
 float densityAtPoint(vec3 point){
     float heightAboveSurface = distance(point, pc.BodyPositionRadius.xyz) - pc.BodyPositionRadius.w;
-    float height01 = heightAboveSurface / 8000;
+    float height01 = heightAboveSurface / pc.scaleHeight;
     float localDensity = exp(-height01);
     return localDensity;
 }
@@ -95,7 +95,7 @@ void main(){
     float phaseR = phase(dot(raydir, normalize(pc.intensitySunPos.yzw )));
     float planetRadius = pc.BodyPositionRadius.w;
     vec2 innerIntersect = raySphereIntersect(raydir, vec3(0, 0, 0), planetRadius);
-    vec2 outerIntersect = raySphereIntersect(raydir, vec3(0, 0, 0), planetRadius + 100000);
+    vec2 outerIntersect = raySphereIntersect(raydir, vec3(0, 0, 0), planetRadius + pc.atmosphereHeight);
     vec2 Intersect = getDoubleSphereIntersect(outerIntersect, innerIntersect);
     if(Intersect == vec2(0, 0)) return;
     float stepSize = (Intersect.y - Intersect.x) / 64;
@@ -106,7 +106,7 @@ void main(){
         vec3 pos = raydir * (i * stepSize + Intersect.x + stepSize / 2);
         vec3 sunDir = normalize(pc.intensitySunPos.yzw - pos);
         vec2 sunInnerIntersect = raySphereIntersect(sunDir, pos, planetRadius);
-        vec2 LUTuv = vec2((distance(pos, pc.BodyPositionRadius.xyz) - pc.BodyPositionRadius.w) / 100000, dot(normalize(pos - pc.BodyPositionRadius.xyz), sunDir) * 0.5 + 0.5);
+        vec2 LUTuv = vec2((distance(pos, pc.BodyPositionRadius.xyz) - pc.BodyPositionRadius.w) / pc.atmosphereHeight, dot(normalize(pos - pc.BodyPositionRadius.xyz), sunDir) * 0.5 + 0.5);
         vec3 sunRayOpticalDepth = texture(sunRayLUT, LUTuv).r * pc.FOVRayleigh.yzw;
         float localDensity = densityAtPoint(pos);
         viewRayOpticalDepth += localDensity * stepSize;

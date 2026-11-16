@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 
+#include "Atmosphere.h"
 #include "Math/Math.h"
 #include "KeplerOrbit.h"
 
@@ -27,6 +28,8 @@ namespace Caelus {
         int textureIndex = noParent;
         double rotationalPeriod = 0;
         double axialTilt = 0;
+        std::optional<AtmosphereParams> atmosphereParams;
+        int atmosphereLUTindex;
     };
 } // Caelus
 

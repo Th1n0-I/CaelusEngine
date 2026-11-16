@@ -82,6 +82,12 @@ namespace Caelus {
         earth.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_earth_daymap.jpg";
         earth.axialTilt = 23.44 * deg;
         earth.rotationalPeriod = 23.9345 * hour;
+        earth.atmosphereParams = {
+            .radius = earth.radius,
+            .atmosphereHeight = 100000,
+            .scaleHeight = 8000,
+            .rayleighBeta = {5.8e-6, 13.5e-6, 33.1e-6},
+        };
 
         // ---- index 5
         Caelus::Body mars;
