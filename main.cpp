@@ -192,7 +192,7 @@ int main() {
     
     {
         auto code = readFile("shaders/Atmosphere.frag.spv");
-        atmosphereShader = renderer.createFullScreenShader(code, sizeof(AtmosphereConstants));
+        atmosphereShader = renderer.createFullScreenShader(code, sizeof(AtmosphereConstants), VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA);
     }
     
     
@@ -213,17 +213,17 @@ int main() {
     {
         ZoneScopedN("OpticalDepthLUT");
         std::vector<float> data;
-        data.reserve(256 * 64);
-        data.resize(256 * 64);
+        data.reserve(256 * 512);
+        data.resize(256 * 512);
         for (int w = 0; w < 256; w++) {
-            for (int h = 0; h < 64; h++) {
+            for (int h = 0; h < 512; h++) {
                 float height = (w + 0.5) / 256.0f * 100000;
-                float cos = (h + 0.5) / 64.0f * 2 - 1;
+                float cos = (h + 0.5) / 512.0f * 2 - 1;
                 float value = GetOpticalDepth(height, cos);
                 data[w + h * 256] = value;
             }
         }
-        atmoLUT = renderer.createTexture(data.data(), 256, 64, VK_FORMAT_R32_SFLOAT, 4, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        atmoLUT = renderer.createTexture(data.data(), 256, 512, VK_FORMAT_R32_SFLOAT, 4, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     }
 
     int followIndex = 3;

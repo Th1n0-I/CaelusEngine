@@ -15,6 +15,8 @@ namespace Caelus {
         VkShaderModule frag = VK_NULL_HANDLE;
         uint32_t vertexStride = 0;
         VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        VkBlendFactor srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        VkBlendFactor dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
         bool depthTest = true;
         bool depthWrite = true;
         bool alphaBlend = false;

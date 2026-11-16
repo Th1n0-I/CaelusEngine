@@ -59,7 +59,7 @@ namespace Caelus {
         void destroyMesh(Mesh& mesh);
         static void drawMesh(VkCommandBuffer commandBuffer, Mesh& mesh);
         
-        FullScreenShader createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize);
+        FullScreenShader createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize, VkBlendFactor srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA, VkBlendFactor dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
         void DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants) const;
         void DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants, Textures::Texture tex) const;
 

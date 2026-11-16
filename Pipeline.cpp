@@ -89,8 +89,8 @@ namespace Caelus {
             VK_COLOR_COMPONENT_A_BIT;
         if (desc.alphaBlend) {
             blendAttachment.blendEnable = VK_TRUE;
-            blendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-            blendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            blendAttachment.srcColorBlendFactor = desc.srcColorBlendFactor;
+            blendAttachment.dstColorBlendFactor = desc.dstColorBlendFactor;
             blendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
             blendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
             blendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
