@@ -25,18 +25,7 @@
 
 using namespace Caelus::Math;
 
-struct AtmosphereConstants {
-    Vector4 BodyPositionRadius;
-    Vector4 FOVRayleigh;
-    Vector4 intensitySunPos;
-    float res[2];
-    float camera[2];
-    float atmosphereHeight;
-    float scaleHeight;
-    float mieScaleHeight;
-    float mieG;
-    float mieBeta;
-};
+
 
 static std::vector<char> readFile(const std::string& path) {
     // Get the file
@@ -157,7 +146,7 @@ int main() {
     
     {
         auto code = readFile("shaders/Atmosphere.frag.spv");
-        atmosphereShader = renderer.createFullScreenShader(code, sizeof(AtmosphereConstants), VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA);
+        atmosphereShader = renderer.createFullScreenShader(code, sizeof(Caelus::AtmosphereConstants), VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA);
     }
     
     for (auto& body : bodies) {
@@ -462,14 +451,12 @@ int main() {
                 auto& atmosphere = body.atmosphereParams.value();
                 auto renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
                 
-                AtmosphereConstants consts{};
-                consts.BodyPositionRadius = {renderPos.x, renderPos.y, renderPos.z, bodies[3].radius};
-                consts.FOVRayleigh = {camera.GetFov(), atmosphere.rayleighBeta.x, atmosphere.rayleighBeta.y, atmosphere.rayleighBeta.z};
-                consts.intensitySunPos = {static_cast<float>(sunIntensity), sunRenderPos.x, sunRenderPos.y, sunRenderPos.z};
-                consts.camera[0] = camera.GetPitch();
-                consts.camera[1] = camera.GetYaw();
-                consts.res[0] = (renderer.swapChain().extent.width);
-                consts.res[1] = (renderer.swapChain().extent.height);
+                Caelus::AtmosphereConstants consts{};
+                consts.BodyPosition = renderPos; consts.Radius = body.radius;
+                consts.Rayleigh = atmosphere.rayleighBeta; consts.FOV = camera.GetFov();
+                consts.SunPos = sunRenderPos; consts.sunIntensity = sunIntensity;
+                consts.camera = {camera.GetPitch(), camera.GetYaw()};
+                consts.res = {static_cast<float>(renderer.swapChain().extent.width), static_cast<float>(renderer.swapChain().extent.height)};
                 consts.atmosphereHeight = atmosphere.atmosphereHeight;
                 consts.scaleHeight = atmosphere.rayleighScaleHeight;
                 consts.mieScaleHeight = atmosphere.mieScaleHeight;

@@ -4,11 +4,10 @@ layout(location = 0) in vec2 uv;
 layout(location = 0) out vec4 outColor;
 
 layout(push_constant) uniform Consts{
-    vec4 BodyPositionRadius;
-    vec4 FOVRayleigh;
-    vec4 intensitySunPos;
-    float res[2];
-    float camera[2];
+    vec3 BodyPosition; float Radius;
+    vec3 Rayleigh; float FOV;
+    vec3 SunPos; float sunIntensity;
+    vec2 res; vec2 camera;
     float atmosphereHeight;
     float scaleHeight;
     float mieScaleHeight;
@@ -27,8 +26,8 @@ vec3 getRayDirection(){
     vec3 rayDir;
     vec2 ndc = (uv - 0.5) * 2.0;
     
-    float f = tan(pc.FOVRayleigh.x * 0.5f);
-    float aspect = pc.res[0] / pc.res[1];
+    float f = tan(pc.FOV * 0.5f);
+    float aspect = pc.res.x / pc.res.y;
     
     float deltaY = f * -ndc.y;
     float deltaX = f * aspect * ndc.x;
@@ -36,14 +35,14 @@ vec3 getRayDirection(){
     vec3 newPos = vec3(deltaX, deltaY, -1.0);
     newPos = normalize(newPos);
     
-    mat3 mat = rotY(pc.camera[1]) * rotX(-pc.camera[0]);
+    mat3 mat = rotY(pc.camera.y) * rotX(-pc.camera.x);
     rayDir = mat * newPos;
     
     return rayDir;
 }
 
 vec2 raySphereIntersect(vec3 rayDir, vec3 rayStart, float sphereRadius){
-    vec3 sphereCenter = pc.BodyPositionRadius.xyz;
+    vec3 sphereCenter = pc.BodyPosition;
     rayDir = normalize(rayDir);
     float b = dot(2 * rayDir, (rayStart - sphereCenter));
     float c = dot(rayStart - sphereCenter, rayStart - sphereCenter) - sphereRadius * sphereRadius;
@@ -69,7 +68,7 @@ vec2 getDoubleSphereIntersect(vec2 big, vec2 small){
 }
 
 vec2 densityAtPoint(vec3 point){
-    float heightAboveSurface = distance(point, pc.BodyPositionRadius.xyz) - pc.BodyPositionRadius.w;
+    float heightAboveSurface = distance(point, pc.BodyPosition) - pc.Radius;
     float height01 = heightAboveSurface / pc.scaleHeight;
     float mieHeight01 = heightAboveSurface / pc.mieScaleHeight;
     float localDensity = exp(-height01);
@@ -87,40 +86,53 @@ float henyeyGreenstein(float cosTheta, float g){
 
 void main(){
     outColor = vec4(0, 0, 0, 1);
-    vec3 raydir = getRayDirection();
     
-    float planetRadius = pc.BodyPositionRadius.w;
-    vec2 innerIntersect = raySphereIntersect(raydir, vec3(0, 0, 0), planetRadius);
-    vec2 outerIntersect = raySphereIntersect(raydir, vec3(0, 0, 0), planetRadius + pc.atmosphereHeight);
+    //-Setup-//
+    vec3 raydir = getRayDirection();
+    vec2 innerIntersect = raySphereIntersect(raydir, vec3(0, 0, 0), pc.Radius);
+    vec2 outerIntersect = raySphereIntersect(raydir, vec3(0, 0, 0), pc.Radius + pc.atmosphereHeight);
     vec2 Intersect = getDoubleSphereIntersect(outerIntersect, innerIntersect);
     if(Intersect == vec2(0, 0)) return;
+    
     float stepSize = (Intersect.y - Intersect.x) / 64;
+    
+    //-Fields-//
     vec3 inScatteredR = vec3(0);
     vec3 inScatteredM = vec3(0);
     float sumTransmittance = 1;
     vec2 viewRayOpticalDepth = vec2(0);
+    
     for(int i = 0; i < 64; i++){
+        // Position and direction to sun
         vec3 pos = raydir * (i * stepSize + Intersect.x + stepSize / 2);
-        vec3 sunDir = normalize(pc.intensitySunPos.yzw - pos);
-        vec2 sunInnerIntersect = raySphereIntersect(sunDir, pos, planetRadius);
-        vec2 LUTuv = vec2((distance(pos, pc.BodyPositionRadius.xyz) - pc.BodyPositionRadius.w) / pc.atmosphereHeight, dot(normalize(pos - pc.BodyPositionRadius.xyz), sunDir) * 0.5 + 0.5);
-        vec2 sunOD = texture(sunRayLUT, LUTuv).rg;
+        vec3 sunDir = normalize(pc.SunPos - pos);
+        
         vec2 localDensity = densityAtPoint(pos);
         viewRayOpticalDepth += localDensity * stepSize;
-        vec3 tau = pc.FOVRayleigh.yzw * (sunOD.r + viewRayOpticalDepth.x) + (pc.mieBeta * 1.11) * (sunOD.g + viewRayOpticalDepth.y);
+        
+        // Early skip on shadowed
+        vec2 sunInnerIntersect = raySphereIntersect(sunDir, pos, pc.Radius);
+        if(sunInnerIntersect != vec2(0,0) && sunInnerIntersect.x >= 0) continue;
+        
+        //LUT 
+        vec2 LUTuv = vec2((distance(pos, pc.BodyPosition) - pc.Radius) / pc.atmosphereHeight, dot(normalize(pos - pc.BodyPosition), sunDir) * 0.5 + 0.5);
+        vec2 sunOD = textureLod(sunRayLUT, LUTuv, 0.0).rg;
+        
+        //How much light gets absorbed.
+        vec3 tau = pc.Rayleigh * (sunOD.r + viewRayOpticalDepth.x) + (pc.mieBeta * 1.11) * (sunOD.g + viewRayOpticalDepth.y);
         vec3 transmittance = exp(-tau);
-        sumTransmittance *= exp(-stepSize * localDensity.x * ((pc.FOVRayleigh.y + pc.FOVRayleigh.z + pc.FOVRayleigh.w) / 3));
-        if(sunInnerIntersect == vec2(0, 0) || sunInnerIntersect.x < 0) {
-            inScatteredM += localDensity.y * transmittance * stepSize;
-            inScatteredR += localDensity.x * transmittance * stepSize;
-        }
+        
+        sumTransmittance *= exp(-stepSize * localDensity.x * ((pc.Rayleigh.x + pc.Rayleigh.y + pc.Rayleigh.z) / 3));
+        
+        inScatteredM += localDensity.y * transmittance * stepSize;
+        inScatteredR += localDensity.x * transmittance * stepSize;
     }
     
-    float cosTheta = dot(raydir, normalize(pc.intensitySunPos.yzw));
+    float cosTheta = dot(raydir, normalize(pc.SunPos));
     float phaseR = phaseRayleigh(cosTheta);
     float phaseM = henyeyGreenstein(cosTheta, pc.mieG);
-    vec3 rayleigh = inScatteredR * phaseR * pc.FOVRayleigh.yzw * pc.intensitySunPos.x;
-    vec3 mie = inScatteredM * phaseM * pc.mieBeta * pc.intensitySunPos.x;
+    vec3 rayleigh = inScatteredR * phaseR * pc.Rayleigh * pc.sunIntensity;
+    vec3 mie = inScatteredM * phaseM * pc.mieBeta * pc.sunIntensity;
     
     outColor = vec4(rayleigh + mie, sumTransmittance);
 }
