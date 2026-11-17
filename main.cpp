@@ -33,6 +33,9 @@ struct AtmosphereConstants {
     float camera[2];
     float atmosphereHeight;
     float scaleHeight;
+    float mieScaleHeight;
+    float mieG;
+    float mieBeta;
 };
 
 static std::vector<char> readFile(const std::string& path) {
@@ -469,6 +472,9 @@ int main() {
                 consts.res[1] = (renderer.swapChain().extent.height);
                 consts.atmosphereHeight = atmosphere.atmosphereHeight;
                 consts.scaleHeight = atmosphere.rayleighScaleHeight;
+                consts.mieScaleHeight = atmosphere.mieScaleHeight;
+                consts.mieBeta = atmosphere.mieBeta;
+                consts.mieG = atmosphere.mieG;
                 
                 renderer.DrawFullScreenShader(atmosphereShader, &consts, atmosphereLUTs[body.atmosphereLUTindex]);
             }

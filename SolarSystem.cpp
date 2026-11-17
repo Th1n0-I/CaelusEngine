@@ -87,6 +87,8 @@ namespace Caelus {
             .atmosphereHeight = 100000,
             .rayleighScaleHeight = 8000,
             .mieScaleHeight = 1200,
+            .mieBeta = 21e-6,
+            .mieG = 0.76,
             .rayleighBeta = {5.8e-6, 13.5e-6, 33.1e-6},
         };
 

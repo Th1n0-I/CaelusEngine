@@ -11,6 +11,9 @@ layout(push_constant) uniform Consts{
     float camera[2];
     float atmosphereHeight;
     float scaleHeight;
+    float mieScaleHeight;
+    float mieG;
+    float mieBeta;
 } pc;
 
 layout(set = 0, binding = 0) uniform sampler2D sunRayLUT;
@@ -65,11 +68,13 @@ vec2 getDoubleSphereIntersect(vec2 big, vec2 small){
     }
 }
 
-float densityAtPoint(vec3 point){
+vec2 densityAtPoint(vec3 point){
     float heightAboveSurface = distance(point, pc.BodyPositionRadius.xyz) - pc.BodyPositionRadius.w;
     float height01 = heightAboveSurface / pc.scaleHeight;
+    float mieHeight01 = heightAboveSurface / pc.mieScaleHeight;
     float localDensity = exp(-height01);
-    return localDensity;
+    float mieLocalDensity = exp(-mieHeight01);
+    return vec2(localDensity, mieLocalDensity);
 }
 
 float phaseRayleigh(float cosTheta){
@@ -77,33 +82,45 @@ float phaseRayleigh(float cosTheta){
 }
 
 float henyeyGreenstein(float cosTheta, float g){
-    return (1.0 / 4.0 * 3.1415926535) * ((1 - g * g) / pow(1.0 + g * g - 2.0 * g * cosTheta, 1.5));
+    return (1.0 / (4.0 * 3.1415926535)) * ((1 - g * g) / pow(1.0 + g * g - 2.0 * g * cosTheta, 1.5));
 }
 
 void main(){
     outColor = vec4(0, 0, 0, 1);
     vec3 raydir = getRayDirection();
-    float phaseR = phaseRayleigh(dot(raydir, normalize(pc.intensitySunPos.yzw )));
+    
     float planetRadius = pc.BodyPositionRadius.w;
     vec2 innerIntersect = raySphereIntersect(raydir, vec3(0, 0, 0), planetRadius);
     vec2 outerIntersect = raySphereIntersect(raydir, vec3(0, 0, 0), planetRadius + pc.atmosphereHeight);
     vec2 Intersect = getDoubleSphereIntersect(outerIntersect, innerIntersect);
     if(Intersect == vec2(0, 0)) return;
     float stepSize = (Intersect.y - Intersect.x) / 64;
-    vec3 inScatteredLight = vec3(0, 0, 0);
+    vec3 inScatteredR = vec3(0);
+    vec3 inScatteredM = vec3(0);
     float sumTransmittance = 1;
-    float viewRayOpticalDepth = 0;
+    vec2 viewRayOpticalDepth = vec2(0);
     for(int i = 0; i < 64; i++){
         vec3 pos = raydir * (i * stepSize + Intersect.x + stepSize / 2);
         vec3 sunDir = normalize(pc.intensitySunPos.yzw - pos);
         vec2 sunInnerIntersect = raySphereIntersect(sunDir, pos, planetRadius);
         vec2 LUTuv = vec2((distance(pos, pc.BodyPositionRadius.xyz) - pc.BodyPositionRadius.w) / pc.atmosphereHeight, dot(normalize(pos - pc.BodyPositionRadius.xyz), sunDir) * 0.5 + 0.5);
-        vec3 sunRayOpticalDepth = texture(sunRayLUT, LUTuv).r * pc.FOVRayleigh.yzw;
-        float localDensity = densityAtPoint(pos);
+        vec2 sunOD = texture(sunRayLUT, LUTuv).rg;
+        vec2 localDensity = densityAtPoint(pos);
         viewRayOpticalDepth += localDensity * stepSize;
-        vec3 transmittance = exp(-(sunRayOpticalDepth + viewRayOpticalDepth * pc.FOVRayleigh.yzw));
-        sumTransmittance *= exp(-stepSize * localDensity * ((pc.FOVRayleigh.y + pc.FOVRayleigh.z + pc.FOVRayleigh.w) / 3));
-        if(sunInnerIntersect == vec2(0, 0) || sunInnerIntersect.x < 0) inScatteredLight += localDensity * transmittance * stepSize * pc.FOVRayleigh.yzw * pc.intensitySunPos.x;
+        vec3 tau = pc.FOVRayleigh.yzw * (sunOD.r + viewRayOpticalDepth.x) + (pc.mieBeta * 1.11) * (sunOD.g + viewRayOpticalDepth.y);
+        vec3 transmittance = exp(-tau);
+        sumTransmittance *= exp(-stepSize * localDensity.x * ((pc.FOVRayleigh.y + pc.FOVRayleigh.z + pc.FOVRayleigh.w) / 3));
+        if(sunInnerIntersect == vec2(0, 0) || sunInnerIntersect.x < 0) {
+            inScatteredM += localDensity.y * transmittance * stepSize;
+            inScatteredR += localDensity.x * transmittance * stepSize;
+        }
     }
-    outColor = vec4(inScatteredLight * phaseR, sumTransmittance);
+    
+    float cosTheta = dot(raydir, normalize(pc.intensitySunPos.yzw));
+    float phaseR = phaseRayleigh(cosTheta);
+    float phaseM = henyeyGreenstein(cosTheta, pc.mieG);
+    vec3 rayleigh = inScatteredR * phaseR * pc.FOVRayleigh.yzw * pc.intensitySunPos.x;
+    vec3 mie = inScatteredM * phaseM * pc.mieBeta * pc.intensitySunPos.x;
+    
+    outColor = vec4(rayleigh + mie, sumTransmittance);
 }

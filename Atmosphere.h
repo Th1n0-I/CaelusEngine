@@ -14,6 +14,8 @@ namespace Caelus {
         float atmosphereHeight = 0;
         float rayleighScaleHeight = 0;
         float mieScaleHeight = 0;
+        float mieBeta = 0;
+        float mieG = 0;
         Math::Vector3 rayleighBeta = Math::Vector3(0, 0, 0);
     };
 
