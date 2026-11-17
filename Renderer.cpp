@@ -50,6 +50,10 @@ namespace Caelus {
         vkDestroyImageView(m_context.device, m_swapChain.depthView, nullptr);
         vkDestroyImage(m_context.device, m_swapChain.depthImage, nullptr);
         vkFreeMemory(m_context.device, m_swapChain.depthMemory, nullptr);
+        
+        vkDestroyImageView(m_context.device, m_swapChain.HDRView, nullptr);
+        vkDestroyImage(m_context.device, m_swapChain.HDRImage, nullptr);
+        vkFreeMemory(m_context.device, m_swapChain.HDRMemory, nullptr);
 
         for (const auto v : m_swapChain.views) vkDestroyImageView(m_context.device, v, nullptr);
         vkDestroySwapchainKHR(m_context.device, m_swapChain.handle, nullptr);
@@ -172,7 +176,7 @@ namespace Caelus {
             return {};
         }
 
-        const Textures::Texture tex = createTexture(pixels, width, height, VK_FORMAT_R8G8B8A8_SRGB, 4, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE);
+        const Textures::Texture tex = createTexture(pixels, width, height, VK_FORMAT_R8G8B8A8_SRGB, 4, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         
         stbi_image_free(pixels);
         
@@ -386,7 +390,7 @@ namespace Caelus {
             .setLayouts = {m_textureSetLayout},
         };
         
-        createPipeline(m_context.device, m_swapChain.format, desc, s.layout, s.pipeline);
+        createPipeline(m_context.device, m_swapChain.HDRFormat, desc, s.layout, s.pipeline);
         
         return s;
     }
@@ -496,7 +500,7 @@ namespace Caelus {
             .pushConstantSize = sizeof(Consts),
             .setLayouts = {m_textureSetLayout},
         };
-        createPipeline(m_context.device, m_swapChain.format, mainDesc, m_pipelineLayout, m_pipeline);
+        createPipeline(m_context.device, m_swapChain.HDRFormat, mainDesc, m_pipelineLayout, m_pipeline);
         
         PipelineDesc lineDesc{};
         lineDesc.vert = lineVertModule;
@@ -506,12 +510,12 @@ namespace Caelus {
         lineDesc.depthWrite = false;
         lineDesc.alphaBlend = true;
         lineDesc.pushConstantSize = sizeof(LineConsts);
-        createPipeline(m_context.device, m_swapChain.format, lineDesc, m_linePipelineLayout, m_linePipeline);
+        createPipeline(m_context.device, m_swapChain.HDRFormat, lineDesc, m_linePipelineLayout, m_linePipeline);
         
         PipelineDesc skyDesc = mainDesc;
         skyDesc.depthTest = false;
         skyDesc.depthWrite = false;
-        createPipeline(m_context.device, m_swapChain.format, skyDesc, m_skyPipelineLayout, m_skyPipeline);
+        createPipeline(m_context.device, m_swapChain.HDRFormat, skyDesc, m_skyPipelineLayout, m_skyPipeline);
 
         vkDestroyShaderModule(m_context.device, vertModule, nullptr);
         vkDestroyShaderModule(m_context.device, fragModule, nullptr);
@@ -546,7 +550,7 @@ namespace Caelus {
         barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = m_swapChain.images[m_imageIndex];
+        barrier.image = m_swapChain.HDRImage;
         barrier.subresourceRange = {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0,
             .layerCount = 1
@@ -580,7 +584,7 @@ namespace Caelus {
 
         VkRenderingAttachmentInfo colorAttachmentInfo{};
         colorAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-        colorAttachmentInfo.imageView = m_swapChain.views[m_imageIndex];
+        colorAttachmentInfo.imageView = m_swapChain.HDRView;
         colorAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         colorAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         colorAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -695,6 +699,9 @@ namespace Caelus {
         vkDestroyImageView(m_context.device, m_swapChain.depthView, nullptr);
         vkDestroyImage(m_context.device, m_swapChain.depthImage, nullptr);
         vkFreeMemory(m_context.device, m_swapChain.depthMemory, nullptr);
+        vkDestroyImageView(m_context.device, m_swapChain.HDRView, nullptr);
+        vkDestroyImage(m_context.device, m_swapChain.HDRImage, nullptr);
+        vkFreeMemory(m_context.device, m_swapChain.HDRMemory, nullptr);
         for (const VkImageView v : m_swapChain.views) vkDestroyImageView(m_context.device, v, nullptr);
         vkDestroySwapchainKHR(m_context.device, m_swapChain.handle, nullptr);
 

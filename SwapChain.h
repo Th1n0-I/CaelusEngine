@@ -18,6 +18,10 @@ namespace Caelus {
         VkDeviceMemory depthMemory = VK_NULL_HANDLE;
         VkImageView depthView = VK_NULL_HANDLE;
         VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
+        VkImage HDRImage = VK_NULL_HANDLE;
+        VkDeviceMemory HDRMemory = VK_NULL_HANDLE;
+        VkImageView HDRView = VK_NULL_HANDLE;
+        VkFormat HDRFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
     };
 
     bool createSwapChain(const VkPhysicalDevice& gpu, const VkSurfaceKHR& surface, const VkDevice& device,
