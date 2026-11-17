@@ -44,6 +44,7 @@ namespace Caelus {
         [[nodiscard]] VkPipelineLayout skyPipelineLayout() const { return m_skyPipelineLayout; }
 
         VkCommandBuffer beginFrame(const float clearColor[4]);
+        void endScene();
         void endFrame();
 
         void resizeSwapChain(GLFWwindow* window);

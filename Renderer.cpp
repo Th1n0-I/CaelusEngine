@@ -623,6 +623,71 @@ namespace Caelus {
         return m_cmd;
     }
 
+    void Renderer::endScene() {
+        vkCmdEndRendering(m_cmd);
+        
+        VkImageMemoryBarrier2 hdrToSrc{};
+        hdrToSrc.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+        hdrToSrc.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        hdrToSrc.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+        hdrToSrc.dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
+        hdrToSrc.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+        hdrToSrc.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        hdrToSrc.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        hdrToSrc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        hdrToSrc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        hdrToSrc.image = m_swapChain.HDRImage;
+        hdrToSrc.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+        
+        VkImageMemoryBarrier2 swapToDst = hdrToSrc;
+        swapToDst.srcAccessMask = 0;
+        swapToDst.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        swapToDst.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        swapToDst.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        swapToDst.image = m_swapChain.images[m_imageIndex];
+        
+        VkImageMemoryBarrier2 toCopy[2] = {hdrToSrc, swapToDst};
+        VkDependencyInfo dep{};
+        dep.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+        dep.imageMemoryBarrierCount = 2;
+        dep.pImageMemoryBarriers = toCopy;
+        vkCmdPipelineBarrier2(m_cmd, &dep);
+        
+        VkImageBlit region{};
+        region.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+        region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+        region.srcOffsets[1] = {(int32_t)m_swapChain.extent.width, (int32_t)m_swapChain.extent.height, 1};
+        region.dstOffsets[1] = region.srcOffsets[1];
+        vkCmdBlitImage(m_cmd, m_swapChain.HDRImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_swapChain.images[m_imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_NEAREST);
+        
+        VkImageMemoryBarrier2 toRender = swapToDst;
+        toRender.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
+        toRender.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+        toRender.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        toRender.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+        toRender.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        toRender.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        dep.imageMemoryBarrierCount = 1;
+        dep.pImageMemoryBarriers = &toRender;
+        vkCmdPipelineBarrier2(m_cmd, &dep);
+        
+        VkRenderingAttachmentInfo colorAttachmentInfo{};
+        colorAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+        colorAttachmentInfo.imageView = m_swapChain.views[m_imageIndex];
+        colorAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        colorAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        
+        VkRenderingInfo renderInfo{};
+        renderInfo.sType = VK_STRUCTURE_TYPE_RENDERING_INFO;
+        renderInfo.renderArea = {.offset = {.x = 0, .y = 0}, .extent = m_swapChain.extent};
+        renderInfo.layerCount = 1;
+        renderInfo.colorAttachmentCount = 1;
+        renderInfo.pColorAttachments = &colorAttachmentInfo;
+
+        vkCmdBeginRendering(m_cmd, &renderInfo);
+    }
+
     void Renderer::endFrame() {
         vkCmdEndRendering(m_cmd);
 

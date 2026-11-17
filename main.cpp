@@ -105,7 +105,7 @@ int main() {
     renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
     renderingInfo.colorAttachmentCount = 1;
     renderingInfo.pColorAttachmentFormats = &renderer.swapChain().format;
-    renderingInfo.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT;
+    renderingInfo.depthAttachmentFormat = VK_FORMAT_UNDEFINED;
 
     ImGui_ImplVulkan_InitInfo initInfo{};
     initInfo.ApiVersion = VK_API_VERSION_1_3;
@@ -467,7 +467,7 @@ int main() {
             }
         }
         
-
+        renderer.endScene();
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
 
