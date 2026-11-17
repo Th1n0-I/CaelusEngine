@@ -72,25 +72,12 @@ float densityAtPoint(vec3 point){
     return localDensity;
 }
 
-vec3 opticalDepth(vec3 rayOrigin, vec3 rayDir, float rayLength){
-    vec3 denistySamplePos = rayOrigin;
-    float stepSize = rayLength / 32;
-    float opticalDepth = 0;
-    
-    for(int i = 0; i < 32; i++){
-        float localDensity = densityAtPoint(denistySamplePos);
-        opticalDepth += localDensity * stepSize;
-        denistySamplePos += rayDir * stepSize;
-    }
-    return opticalDepth * pc.FOVRayleigh.yzw;
-}
-
 float phaseRayleigh(float cosTheta){
     return 3.0 / (16.0 * 3.1415926535) * (1.0 + cosTheta * cosTheta);
 }
 
 float henyeyGreenstein(float cosTheta, float g){
-    return (1 / 4 * 3.1415926535) * ((1 - g * g) / pow(1.0 + g * g - 2.0 * g * cos(cosTheta), 1.5));
+    return (1.0 / 4.0 * 3.1415926535) * ((1 - g * g) / pow(1.0 + g * g - 2.0 * g * cosTheta, 1.5));
 }
 
 void main(){

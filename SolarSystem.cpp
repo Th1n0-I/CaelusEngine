@@ -85,7 +85,8 @@ namespace Caelus {
         earth.atmosphereParams = {
             .radius = earth.radius,
             .atmosphereHeight = 100000,
-            .scaleHeight = 8000,
+            .rayleighScaleHeight = 8000,
+            .mieScaleHeight = 1200,
             .rayleighBeta = {5.8e-6, 13.5e-6, 33.1e-6},
         };
 

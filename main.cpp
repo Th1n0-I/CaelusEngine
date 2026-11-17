@@ -468,7 +468,7 @@ int main() {
                 consts.res[0] = (renderer.swapChain().extent.width);
                 consts.res[1] = (renderer.swapChain().extent.height);
                 consts.atmosphereHeight = atmosphere.atmosphereHeight;
-                consts.scaleHeight = atmosphere.scaleHeight;
+                consts.scaleHeight = atmosphere.rayleighScaleHeight;
                 
                 renderer.DrawFullScreenShader(atmosphereShader, &consts, atmosphereLUTs[body.atmosphereLUTindex]);
             }

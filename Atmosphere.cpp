@@ -22,13 +22,15 @@ namespace Caelus {
         return {std::min(t1, t2), std::max(t1, t2)};
     }
 
-    static float densityAtPoint(float height, AtmosphereParams params){
-        float height01 = height / params.scaleHeight;
-        float localDensity = expf(-std::max(height01, 0.0f));
-        return localDensity;
+    static Vector2 densityAtPoint(float height, AtmosphereParams params){
+        float rayleighHeight01 = height / params.rayleighScaleHeight;
+        float mieHeight01 = height / params.mieScaleHeight;
+        float rayleighDensity = expf(-std::max(rayleighHeight01, 0.0f));
+        float mieDensity = expf(-std::max(mieHeight01, 0.0f));
+        return {rayleighDensity, mieDensity} ;
     }
 
-    static float GetOpticalDepth(float height, float cosine, AtmosphereParams params) {
+    static Vector2 GetOpticalDepth(float height, float cosine, AtmosphereParams params) {
         Vector3 startPos = {0, height + params.radius, 0};
         Vector3 direction = normalize(Vector3{sqrtf(1 - cosine * cosine), cosine, 0}) ;
     
@@ -37,29 +39,34 @@ namespace Caelus {
         float exit = outerIntersect.y;
     
     
-        float stepSize = exit / 32;
-        float opticalDepth = 0;
+        float stepSize = exit / 256;
+        float rayleighOpticalDepth = 0;
+        float mieOpticalDepth = 0;
+        
+        startPos += direction * stepSize * 0.5;
     
-        for(int i = 0; i < 32; i++){
-            float localDensity = densityAtPoint(startPos.length() - params.radius, params);
-            opticalDepth += localDensity * stepSize;
+        for(int i = 0; i < 256; i++){
+            Vector2 localDensity = densityAtPoint(startPos.length() - params.radius, params);
+            rayleighOpticalDepth += localDensity.x * stepSize;
+            mieOpticalDepth += localDensity.y * stepSize;
             startPos += direction * stepSize;
         }
-        return opticalDepth;
+        return {rayleighOpticalDepth, mieOpticalDepth} ;
     }
     
     Textures::Texture GenerateLUT(int width, int height, AtmosphereParams params, Renderer& renderer) {
         std::vector<float> data;
-        data.reserve(width * height);
-        data.resize(width * height);
+        data.reserve(width * height * 2);
+        data.resize(width * height * 2);
         for (int w = 0; w < width; w++) {
             for (int h = 0; h < height; h++) {
                 float altitude = (w + 0.5) / width * params.atmosphereHeight;
                 float cos = (h + 0.5) / height * 2 - 1;
-                float value = GetOpticalDepth(altitude, cos, params);
-                data[w + h * width] = value;
+                Vector2 value = GetOpticalDepth(altitude, cos, params);
+                data[(w + h * width) * 2] = value.x;
+                data[(w + h * width) * 2+ 1] = value.y;
             }
         }
-        return renderer.createTexture(data.data(), width, height, VK_FORMAT_R32_SFLOAT, 4, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+        return renderer.createTexture(data.data(), width, height, VK_FORMAT_R32G32_SFLOAT, 8, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     }
 } // Caelus

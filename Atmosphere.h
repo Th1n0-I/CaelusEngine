@@ -12,7 +12,8 @@ namespace Caelus {
     struct AtmosphereParams {
         float radius = 0;
         float atmosphereHeight = 0;
-        float scaleHeight = 0;
+        float rayleighScaleHeight = 0;
+        float mieScaleHeight = 0;
         Math::Vector3 rayleighBeta = Math::Vector3(0, 0, 0);
     };
 
