@@ -85,14 +85,18 @@ vec3 opticalDepth(vec3 rayOrigin, vec3 rayDir, float rayLength){
     return opticalDepth * pc.FOVRayleigh.yzw;
 }
 
-float phase(float cosTheta){
+float phaseRayleigh(float cosTheta){
     return 3.0 / (16.0 * 3.1415926535) * (1.0 + cosTheta * cosTheta);
+}
+
+float henyeyGreenstein(float cosTheta, float g){
+    return (1 / 4 * 3.1415926535) * ((1 - g * g) / pow(1.0 + g * g - 2.0 * g * cos(cosTheta), 1.5));
 }
 
 void main(){
     outColor = vec4(0, 0, 0, 1);
     vec3 raydir = getRayDirection();
-    float phaseR = phase(dot(raydir, normalize(pc.intensitySunPos.yzw )));
+    float phaseR = phaseRayleigh(dot(raydir, normalize(pc.intensitySunPos.yzw )));
     float planetRadius = pc.BodyPositionRadius.w;
     vec2 innerIntersect = raySphereIntersect(raydir, vec3(0, 0, 0), planetRadius);
     vec2 outerIntersect = raySphereIntersect(raydir, vec3(0, 0, 0), planetRadius + pc.atmosphereHeight);
