@@ -31,6 +31,7 @@ namespace Caelus {
         float matrix[4][4];
         Math::Vector4 bodyPosRadius;
         Math::Vector4 sunPosEmissive;
+        float E;
     };
 
     struct LineConsts {

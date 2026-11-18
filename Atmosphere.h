@@ -22,7 +22,7 @@ namespace Caelus {
     struct AtmosphereConstants {
         Math::Vector3 BodyPosition; float Radius;
         Math::Vector3 Rayleigh; float FOV;
-        Math::Vector3 SunPos; float sunIntensity;
+        Math::Vector3 SunPos; float E;
         Math::Vector2 res; Math::Vector2 camera;
         float atmosphereHeight;
         float scaleHeight;

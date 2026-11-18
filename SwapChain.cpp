@@ -24,7 +24,7 @@ namespace Caelus {
         ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
         if (vkCreateImage(device, &ci, nullptr, &swapChain.depthImage) != VK_SUCCESS) {
-            printf("Failed to create hdr image!");
+            printf("Failed to create hdr image!\n");
             return false;
         }
 
@@ -37,7 +37,7 @@ namespace Caelus {
         ai.memoryTypeIndex = findMemoryType(gpu, req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (vkAllocateMemory(device, &ai, nullptr, &swapChain.depthMemory) != VK_SUCCESS) {
-            printf("Failed to allocate hdr memory!");
+            printf("Failed to allocate hdr memory!\n");
             return false;
         }
 
@@ -54,10 +54,10 @@ namespace Caelus {
         };
 
         if (vkCreateImageView(device, &ici, nullptr, &swapChain.depthView) != VK_SUCCESS) {
-            printf("Failed to create depth view!");
+            printf("Failed to create depth view!\n");
             return false;
         }
-        printf("Successfully created depth buffer!");
+        printf("Successfully created depth buffer!\n");
         return true;
     }
     
@@ -75,7 +75,7 @@ namespace Caelus {
         ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
         if (vkCreateImage(device, &ci, nullptr, &swapChain.HDRImage) != VK_SUCCESS) {
-            printf("Failed to create depth image!");
+            printf("Failed to create depth image!\n");
             return false;
         }
 
@@ -88,7 +88,7 @@ namespace Caelus {
         ai.memoryTypeIndex = findMemoryType(gpu, req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (vkAllocateMemory(device, &ai, nullptr, &swapChain.HDRMemory) != VK_SUCCESS) {
-            printf("Failed to allocate depth memory!");
+            printf("Failed to allocate depth memory!\n");
             return false;
         }
 
@@ -105,10 +105,10 @@ namespace Caelus {
         };
 
         if (vkCreateImageView(device, &ici, nullptr, &swapChain.HDRView) != VK_SUCCESS) {
-            printf("Failed to create HDR view!");
+            printf("Failed to create HDR view!\n");
             return false;
         }
-        printf("Successfully created HDR buffer!");
+        printf("Successfully created HDR buffer!\n");
         return true;
     }
 

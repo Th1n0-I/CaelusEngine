@@ -11,6 +11,7 @@ layout(push_constant) uniform Consts{
     mat4 matrix;
     vec4 bodyPosRadius;
     vec4 sunPosEmissive;
+    float E;
 } pc;
 
 void main(){

@@ -183,6 +183,21 @@ namespace Caelus::Math {
         const WorldPos d = p - cameraPos;
         return Vector3{.x = static_cast<float>(d.x), .y = static_cast<float>(d.y), .z = static_cast<float>(d.z)};
     }
+
+    inline double length(const WorldPos& p) {
+        return sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
+    }
+    
+    inline double distance(const WorldPos& a, const WorldPos& b) {
+        WorldPos c = {b.x - a.x, b.y - a.y, b.z - a.z};
+        return length(c);
+    }
+    
+    inline float doubleToAU(const double& d) {
+        const double AU = d / 1.495978707e11;
+        return static_cast<float>(AU);
+    }
+    
 } // Caelus::Math
 
 

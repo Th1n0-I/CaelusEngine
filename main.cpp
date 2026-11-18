@@ -25,7 +25,15 @@
 
 using namespace Caelus::Math;
 
+struct TonemapPushConstants {
+    float exposure;
+};
 
+static float GetBrightnessFromWorldPos(const WorldPos worldPos, float exposure) {
+    double d = length(worldPos);
+    double E = 128000 * pow(1.0 / doubleToAU(d), 2) * exposure;
+    return E;
+}
 
 static std::vector<char> readFile(const std::string& path) {
     // Get the file
@@ -189,6 +197,7 @@ int main() {
     std::vector<OrbitRange> orbitRanges;
 
     double time = 0, timeScale = 1, sunIntensity = 16.8;
+    float EV = 15;
     std::string overlayText;
     float overlayTimer = 0.0f;
     while (!glfwWindowShouldClose(window)) {
@@ -263,6 +272,7 @@ int main() {
                     if (bodies[i].parent == Caelus::Body::noParent) { drawBodyTree(bodies, i, followIndex, camera); }
                 }
                 ImGui::DragFloat("Sensitivity", &sensitivity, 0.01f);
+                ImGui::DragFloat("Exposure", &EV, 0.01f);
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Simulation")) {
@@ -395,6 +405,7 @@ int main() {
         consts.res[1] = static_cast<int>(renderer.swapChain().extent.height);
 
         const Vector3 sunRenderPos = toRenderSpace(bodies[0].worldPosition, camera.GetPosition());
+        const float exposure = 1.0 / (1.2 * powf(2, EV));
 
         {
             ZoneScopedN("Skybox Rendering");
@@ -432,6 +443,8 @@ int main() {
                 consts.spin[0] = (float)body.axialTilt;
                 consts.spin[1] = (float)spin;
                 
+                consts.E = GetBrightnessFromWorldPos(body.worldPosition, exposure);
+                
                 const auto& tex = body.textureIndex != Caelus::Body::noParent ? textures[body.textureIndex] : whiteTexture;
                 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 0, 1, &tex.descriptorSet, 0, nullptr);
                 
@@ -466,7 +479,7 @@ int main() {
                 Caelus::AtmosphereConstants consts{};
                 consts.BodyPosition = renderPos; consts.Radius = body.radius;
                 consts.Rayleigh = atmosphere.rayleighBeta; consts.FOV = camera.GetFov();
-                consts.SunPos = sunRenderPos; consts.sunIntensity = sunIntensity;
+                consts.SunPos = sunRenderPos; consts.E = GetBrightnessFromWorldPos(body.worldPosition, exposure);
                 consts.camera = {camera.GetPitch(), camera.GetYaw()};
                 consts.res = {static_cast<float>(renderer.swapChain().extent.width), static_cast<float>(renderer.swapChain().extent.height)};
                 consts.atmosphereHeight = atmosphere.atmosphereHeight;
@@ -480,6 +493,11 @@ int main() {
         }
         
         renderer.endScene();
+        {
+            TonemapPushConstants consts{};
+            consts.exposure = EV;
+            renderer.DrawFullScreenShader(tonemapShader, &consts, renderer.hdrTexture());
+        }
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 
 

@@ -10,6 +10,7 @@ layout(push_constant) uniform Consts{
     mat4 matrix;
     vec4 bodyPosRadius;
     vec4 sunPosEmissive;
+    float E;
 } pc;
 
 layout(set = 0, binding = 0) uniform sampler2D starMap;
@@ -40,7 +41,6 @@ void main(){
     vec3 surfaceDir = transpose(planetRot) * normal;
     vec2 uv = uvFromDirection(surfaceDir);
     
-    vec3 sunCol = vec3(1.0, 0.9, 0.7);
     if(pc.sunPosEmissive.w > 0.5){
         outColor = vec4(texture(starMap, uv).rgb, 1.0);;
         return;
@@ -49,11 +49,10 @@ void main(){
     
     vec4 texCol = vec4(texture(starMap, vec2(1.0 - uv.x, uv.y)).rgb, 1.0);
     
-    vec3 baseCol = vec3(0.5, 0.5, 0.5) * texCol.rgb;
-    vec3 shadowCol = vec3(0, 0, 0);
+    vec3 baseCol = texCol.rgb;
     
     
     vec3 toSun = normalize(pc.sunPosEmissive.xyz - fragPos);
     float t = max(dot(normal, toSun), 0.0);
-    outColor = vec4(shadowCol + baseCol * sunCol * t, 1.0);
+    outColor = vec4(baseCol * pc.E * t / 3.1415926535, 1.0);
 }

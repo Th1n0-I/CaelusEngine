@@ -62,6 +62,9 @@ namespace Caelus {
             printf("Failed to resize swapChain!\n");
             return;
         }
+        m_hdrTexture.view = swapChain().HDRView;
+        updateTextureDescriptor(m_hdrTexture);
+        
         printf("Successfully resized swapChain!\n");
     }
 
@@ -215,7 +218,7 @@ namespace Caelus {
         ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
         if (vkCreateImage(m_context.device, &ci, nullptr, &tex.image) != VK_SUCCESS) {
-            printf("Failed to create image!");
+            printf("Failed to create image!\n");
             return {};
         }
 
@@ -228,7 +231,7 @@ namespace Caelus {
         ai.memoryTypeIndex = findMemoryType(m_context.gpu, req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
         if (vkAllocateMemory(m_context.device, &ai, nullptr, &tex.memory) != VK_SUCCESS) {
-            printf("Failed to allocate image memory!");
+            printf("Failed to allocate image memory!\n");
             return {};
         }
 
@@ -293,7 +296,7 @@ namespace Caelus {
         };
 
         if (vkCreateImageView(m_context.device, &ici, nullptr, &tex.view) != VK_SUCCESS) {
-            printf("Failed to create image view!");
+            printf("Failed to create image view!\n");
             return {};
         }
 
@@ -321,15 +324,20 @@ namespace Caelus {
             .descriptorSetCount = 1,
             .pSetLayouts = &m_textureSetLayout,
         };
+        
+        vkAllocateDescriptorSets(m_context.device, &allocInfo, &tex.descriptorSet);
 
+        updateTextureDescriptor(tex);
+
+    }
+    
+    void Renderer::updateTextureDescriptor(Textures::Texture& tex) {
         VkDescriptorImageInfo imageInfo{
             .sampler = tex.sampler,
             .imageView = tex.view,
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         };
-
-        vkAllocateDescriptorSets(m_context.device, &allocInfo, &tex.descriptorSet);
-
+        
         VkWriteDescriptorSet writeDescriptorSet{
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = tex.descriptorSet,
@@ -341,7 +349,6 @@ namespace Caelus {
 
 
         vkUpdateDescriptorSets(m_context.device, 1, &writeDescriptorSet, 0, nullptr);
-
     }
     
     void Renderer::destroyTexture(Textures::Texture& tex) {

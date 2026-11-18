@@ -42,6 +42,7 @@ namespace Caelus {
         [[nodiscard]] VkPipelineLayout linePipelineLayout() const { return m_linePipelineLayout; }
         [[nodiscard]] VkPipeline skyPipeline() const { return m_skyPipeline; }
         [[nodiscard]] VkPipelineLayout skyPipelineLayout() const { return m_skyPipelineLayout; }
+        [[nodiscard]] Textures::Texture hdrTexture() const { return m_hdrTexture; }
 
         VkCommandBuffer beginFrame(const float clearColor[4]);
         void endScene();
@@ -56,6 +57,7 @@ namespace Caelus {
         Textures::Texture createTexture(const char* path);
         Textures::Texture createTexture(const void* pixels, int width, int height, VkFormat format, uint32_t bytesPerTexel, VkSamplerAddressMode addressU, VkSamplerAddressMode addressV);
         void createTextureDescriptor(Textures::Texture& tex, VkSamplerAddressMode addressU, VkSamplerAddressMode addressV);
+        void updateTextureDescriptor(Textures::Texture& tex);
         void destroyTexture(Textures::Texture& tex);
         Mesh createMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
         void destroyMesh(Mesh& mesh);

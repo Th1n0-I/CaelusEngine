@@ -30,7 +30,7 @@ namespace Caelus {
         ci.usage = usage;
         ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         if (vkCreateBuffer(ctx.device, &ci, nullptr, &out.handle) != VK_SUCCESS) {
-            printf("Failed to create buffer!");
+            printf("Failed to create buffer!\n");
             return false;
         }
 
@@ -42,7 +42,7 @@ namespace Caelus {
         ai.allocationSize = req.size;
         ai.memoryTypeIndex = findMemoryType(ctx.gpu, req.memoryTypeBits, props);
         if (vkAllocateMemory(ctx.device, &ai, nullptr, &out.memory) != VK_SUCCESS) {
-            printf("Failed to allocate memory!");
+            printf("Failed to allocate memory!\n");
             vkDestroyBuffer(ctx.device, out.handle, nullptr);
             out = {};
             return false;

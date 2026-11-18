@@ -6,7 +6,7 @@ layout(location = 0) out vec4 outColor;
 layout(push_constant) uniform Consts{
     vec3 BodyPosition; float Radius;
     vec3 Rayleigh; float FOV;
-    vec3 SunPos; float sunIntensity;
+    vec3 SunPos; float E;
     vec2 res; vec2 camera;
     float atmosphereHeight;
     float scaleHeight;
@@ -131,8 +131,8 @@ void main(){
     float cosTheta = dot(raydir, normalize(pc.SunPos));
     float phaseR = phaseRayleigh(cosTheta);
     float phaseM = henyeyGreenstein(cosTheta, pc.mieG);
-    vec3 rayleigh = inScatteredR * phaseR * pc.Rayleigh * pc.sunIntensity;
-    vec3 mie = inScatteredM * phaseM * pc.mieBeta * pc.sunIntensity;
+    vec3 rayleigh = inScatteredR * phaseR * pc.Rayleigh * pc.E;
+    vec3 mie = inScatteredM * phaseM * pc.mieBeta * pc.E;
     
     outColor = vec4(rayleigh + mie, sumTransmittance);
 }
