@@ -296,7 +296,14 @@ namespace Caelus {
             printf("Failed to create image view!");
             return {};
         }
-        
+
+        createTextureDescriptor(tex, addressU, addressV);
+
+        return tex;
+    }
+
+    void Renderer::createTextureDescriptor(Textures::Texture& tex, VkSamplerAddressMode addressU, VkSamplerAddressMode addressV)
+    {
         VkSamplerCreateInfo sampler{};
         sampler.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         sampler.magFilter = VK_FILTER_LINEAR;
@@ -305,24 +312,24 @@ namespace Caelus {
         sampler.addressModeV = addressV;
         sampler.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         sampler.maxLod = 0;
-        
+
         vkCreateSampler(m_context.device, &sampler, nullptr, &tex.sampler);
-        
+
         VkDescriptorSetAllocateInfo allocInfo{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
             .descriptorPool = m_descriptorPool,
             .descriptorSetCount = 1,
             .pSetLayouts = &m_textureSetLayout,
         };
-        
+
         VkDescriptorImageInfo imageInfo{
             .sampler = tex.sampler,
             .imageView = tex.view,
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         };
-        
+
         vkAllocateDescriptorSets(m_context.device, &allocInfo, &tex.descriptorSet);
-        
+
         VkWriteDescriptorSet writeDescriptorSet{
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .dstSet = tex.descriptorSet,
@@ -331,11 +338,10 @@ namespace Caelus {
             .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .pImageInfo = &imageInfo,
         };
-        
-        
+
+
         vkUpdateDescriptorSets(m_context.device, 1, &writeDescriptorSet, 0, nullptr);
-        
-        return tex;
+
     }
     
     void Renderer::destroyTexture(Textures::Texture& tex) {
@@ -369,7 +375,7 @@ namespace Caelus {
         vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
     }
 
-    FullScreenShader Renderer::createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize, VkBlendFactor srcColorBlendFactor, VkBlendFactor dstColorBlendFactor) {
+    FullScreenShader Renderer::createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize, VkBlendFactor srcColorBlendFactor, VkBlendFactor dstColorBlendFactor, bool renderToHDR) {
         FullScreenShader s;
         s.pushSize = constsSize;
         
@@ -388,9 +394,10 @@ namespace Caelus {
             .alphaBlend = true,
             .pushConstantSize = constsSize,
             .setLayouts = {m_textureSetLayout},
+            .depthFormat = renderToHDR ? VK_FORMAT_D32_SFLOAT : VK_FORMAT_UNDEFINED,
         };
         
-        createPipeline(m_context.device, m_swapChain.HDRFormat, desc, s.layout, s.pipeline);
+        createPipeline(m_context.device, renderToHDR ? m_swapChain.HDRFormat : m_swapChain.format, desc, s.layout, s.pipeline);
         
         return s;
     }
@@ -501,6 +508,9 @@ namespace Caelus {
             .setLayouts = {m_textureSetLayout},
         };
         createPipeline(m_context.device, m_swapChain.HDRFormat, mainDesc, m_pipelineLayout, m_pipeline);
+
+        m_hdrTexture.view = swapChain.HDRView;
+        createTextureDescriptor(m_hdrTexture, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
         
         PipelineDesc lineDesc{};
         lineDesc.vert = lineVertModule;
@@ -630,10 +640,10 @@ namespace Caelus {
         hdrToSrc.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
         hdrToSrc.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
         hdrToSrc.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-        hdrToSrc.dstStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
-        hdrToSrc.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
+        hdrToSrc.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+        hdrToSrc.dstAccessMask = VK_ACCESS_2_SHADER_SAMPLED_READ_BIT;
         hdrToSrc.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        hdrToSrc.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        hdrToSrc.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         hdrToSrc.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         hdrToSrc.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         hdrToSrc.image = m_swapChain.HDRImage;
@@ -641,9 +651,10 @@ namespace Caelus {
         
         VkImageMemoryBarrier2 swapToDst = hdrToSrc;
         swapToDst.srcAccessMask = 0;
-        swapToDst.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
+        swapToDst.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+        swapToDst.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
         swapToDst.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        swapToDst.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        swapToDst.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         swapToDst.image = m_swapChain.images[m_imageIndex];
         
         VkImageMemoryBarrier2 toCopy[2] = {hdrToSrc, swapToDst};
@@ -653,29 +664,11 @@ namespace Caelus {
         dep.pImageMemoryBarriers = toCopy;
         vkCmdPipelineBarrier2(m_cmd, &dep);
         
-        VkImageBlit region{};
-        region.srcSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-        region.dstSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
-        region.srcOffsets[1] = {(int32_t)m_swapChain.extent.width, (int32_t)m_swapChain.extent.height, 1};
-        region.dstOffsets[1] = region.srcOffsets[1];
-        vkCmdBlitImage(m_cmd, m_swapChain.HDRImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_swapChain.images[m_imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region, VK_FILTER_NEAREST);
-        
-        VkImageMemoryBarrier2 toRender = swapToDst;
-        toRender.srcStageMask = VK_PIPELINE_STAGE_2_BLIT_BIT;
-        toRender.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
-        toRender.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-        toRender.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-        toRender.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        toRender.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        dep.imageMemoryBarrierCount = 1;
-        dep.pImageMemoryBarriers = &toRender;
-        vkCmdPipelineBarrier2(m_cmd, &dep);
-        
         VkRenderingAttachmentInfo colorAttachmentInfo{};
         colorAttachmentInfo.sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
         colorAttachmentInfo.imageView = m_swapChain.views[m_imageIndex];
         colorAttachmentInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        colorAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        colorAttachmentInfo.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachmentInfo.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         
         VkRenderingInfo renderInfo{};

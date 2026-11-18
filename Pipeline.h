@@ -22,6 +22,7 @@ namespace Caelus {
         bool alphaBlend = false;
         uint32_t pushConstantSize = 0;
         std::vector<VkDescriptorSetLayout> setLayouts;
+        VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
     };
     
     struct Consts {

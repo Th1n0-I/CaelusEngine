@@ -55,12 +55,13 @@ namespace Caelus {
 
         Textures::Texture createTexture(const char* path);
         Textures::Texture createTexture(const void* pixels, int width, int height, VkFormat format, uint32_t bytesPerTexel, VkSamplerAddressMode addressU, VkSamplerAddressMode addressV);
+        void createTextureDescriptor(Textures::Texture& tex, VkSamplerAddressMode addressU, VkSamplerAddressMode addressV);
         void destroyTexture(Textures::Texture& tex);
         Mesh createMesh(const std::vector<Vertex>& vertices, const std::vector<uint32_t>& indices);
         void destroyMesh(Mesh& mesh);
         static void drawMesh(VkCommandBuffer commandBuffer, Mesh& mesh);
         
-        FullScreenShader createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize, VkBlendFactor srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA, VkBlendFactor dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA);
+        FullScreenShader createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize, VkBlendFactor srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA, VkBlendFactor dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, bool renderToHDR = true);
         void DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants) const;
         void DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants, Textures::Texture tex) const;
 
@@ -83,6 +84,8 @@ namespace Caelus {
         VkPipeline m_skyPipeline = VK_NULL_HANDLE;
         VkDescriptorSetLayout m_textureSetLayout = VK_NULL_HANDLE;
         VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
+
+        Textures::Texture m_hdrTexture;
 
         uint32_t m_imageIndex = 0;
 

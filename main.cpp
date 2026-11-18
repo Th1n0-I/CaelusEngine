@@ -142,23 +142,35 @@ int main() {
     
     
     Caelus::FullScreenShader atmosphereShader;
+    Caelus::FullScreenShader tonemapShader;
     
     
     {
         auto code = readFile("shaders/Atmosphere.frag.spv");
         atmosphereShader = renderer.createFullScreenShader(code, sizeof(Caelus::AtmosphereConstants), VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA);
     }
-    
+
+    {
+        auto code = readFile("shaders/Tonemap.frag.spv");
+        tonemapShader = renderer.createFullScreenShader(code, sizeof(float), VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ZERO, false);
+    }
+
+    unsigned char white[4] = {255, 255, 255, 255};
+    unsigned char black[4] = {0, 0, 0, 255};
+    auto whiteTexture = renderer.createTexture(white, 1, 1, VK_FORMAT_R8G8B8A8_SRGB, 4, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    auto blackTexture = renderer.createTexture(black, 1, 1, VK_FORMAT_R8G8B8A8_SRGB, 4, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    auto starTexture = renderer.createTexture("C:/Users/volts/Downloads/starmap_2020_16k.png");
+    if (starTexture.descriptorSet == VK_NULL_HANDLE) {starTexture = blackTexture;}
+
     for (auto& body : bodies) {
         if (body.texturePath.empty()) continue;
         auto tex = renderer.createTexture(body.texturePath.c_str());
+        if (tex.descriptorSet == VK_NULL_HANDLE) {tex = whiteTexture;}
         body.textureIndex = textures.size();
         textures.push_back(tex);
     }
     
-    unsigned char white[4] = {255, 255, 255, 255};
-    auto whiteTexture = renderer.createTexture(white, 1, 1, VK_FORMAT_R8G8B8A8_SRGB, 4, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-    auto starTexture = renderer.createTexture("C:/Users/volts/Downloads/starmap_2020_16k.png");
+
     
     std::vector<Caelus::Textures::Texture> atmosphereLUTs;
     

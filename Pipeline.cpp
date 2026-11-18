@@ -132,7 +132,7 @@ namespace Caelus {
         renderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
         renderingInfo.colorAttachmentCount = 1;
         renderingInfo.pColorAttachmentFormats = &format;
-        renderingInfo.depthAttachmentFormat = VK_FORMAT_D32_SFLOAT;
+        renderingInfo.depthAttachmentFormat = desc.depthFormat;
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
