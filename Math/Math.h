@@ -27,23 +27,40 @@ namespace Caelus::Math {
     struct Vector3 {
         float x, y, z;
 
-        Vector3 operator+(const Vector3& b) const { return {.x = x + b.x, .y = y + b.y, .z = z + b.z}; }
-        Vector3 operator-(const Vector3& b) const { return {.x = x - b.x, .y = y - b.y, .z = z - b.z}; }
-        Vector3 operator*(const float& b) const { return {.x = x * b, .y = y * b, .z = z * b}; }
-        Vector3 operator*(const Vector3& b) const { return {.x = x * b.x, .y = y * b.y, .z = z * b.z}; }
-        Vector3 operator/(const float& b) const { return {.x = x / b, .y = y / b, .z = z / b}; }
-        Vector3 operator/(const Vector3& b) const { return {.x = x / b.x, .y = y / b.y, .z = z / b.z}; }
+        Vector3 operator+(const Vector3& b) const { return                  {.x = x + b.x,  .y = y + b.y,   .z = z + b.z}; }
+        Vector3 operator+(const float& b) const { return                    {.x = x + b,    .y = y + b,     .z = z + b}; }
+        Vector3 operator-(const Vector3& b) const { return                  {.x = x - b.x,  .y = y - b.y,   .z = z - b.z}; }
+        Vector3 operator-(const float& b) const { return                    {.x = x - b,    .y = y - b,     .z = z - b}; }
+        Vector3 operator-() const { return                                  {.x = -x,       .y = -y,        .z = -z}; }
+        Vector3 operator*(const float& b) const { return                    {.x = x * b,    .y = y * b,     .z = z * b}; }
+        Vector3 operator*(const Vector3& b) const { return                  {.x = x * b.x,  .y = y * b.y,   .z = z * b.z}; }
+        Vector3 operator/(const float& b) const { return                    {.x = x / b,    .y = y / b,     .z = z / b}; }
+        Vector3 operator/(const Vector3& b) const { return                  {.x = x / b.x,  .y = y / b.y,   .z = z / b.z}; }
         [[nodiscard]] float length() const { return sqrtf(x * x + y * y + z * z); }
-        
+
         Vector3& operator+=(const Vector3& b) {
             x += b.x;
             y += b.y;
             z += b.z;
             return *this;
         }
+        
+        Vector3& operator-=(const Vector3& b) {
+            x -= b.x;
+            y -= b.y;
+            z -= b.z;
+            return *this;
+        }
     };
 
     static float dot(const Vector3& a, const Vector3& b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+
+    static Vector3 exp(const Vector3& v) {
+        const float x = std::exp(v.x);
+        const float y = std::exp(v.y);
+        const float z = std::exp(v.z);
+        return {.x = x, .y = y, .z = z};
+    }
 
     static Vector3 normalize(const Vector3& a) { return {a / a.length()}; }
 
@@ -56,7 +73,7 @@ namespace Caelus::Math {
         Vector2 operator*(const Vector2& b) const { return {.x = x * b.x, .y = y * b.y}; }
         Vector2 operator/(const float& b) const { return {.x = x / b, .y = y / b}; }
         Vector2 operator/(const Vector2& b) const { return {.x = x / b.x, .y = y / b.y}; }
-        bool operator==(const Vector2& b) const {return x == b.x && y == b.y; }
+        bool operator==(const Vector2& b) const { return x == b.x && y == b.y; }
 
         Vector2& operator+=(const Vector2& b) {
             x += b.x;
@@ -174,7 +191,14 @@ namespace Caelus::Math {
         double x = 0, y = 0, z = 0;
 
         WorldPos operator+(const WorldPos& w) const { return {.x = x + w.x, .y = y + w.y, .z = z + w.z}; }
-        WorldPos& operator+=(const WorldPos& w) {x += w.x; y += w.y; z += w.z; return *this;}
+
+        WorldPos& operator+=(const WorldPos& w) {
+            x += w.x;
+            y += w.y;
+            z += w.z;
+            return *this;
+        }
+
         WorldPos operator-(const WorldPos& w) const { return {.x = x - w.x, .y = y - w.y, .z = z - w.z}; }
         WorldPos operator*(const double& scale) const { return {.x = x * scale, .y = y * scale, .z = z * scale}; }
     };
@@ -184,20 +208,17 @@ namespace Caelus::Math {
         return Vector3{.x = static_cast<float>(d.x), .y = static_cast<float>(d.y), .z = static_cast<float>(d.z)};
     }
 
-    inline double length(const WorldPos& p) {
-        return sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
-    }
-    
+    inline double length(const WorldPos& p) { return sqrt(p.x * p.x + p.y * p.y + p.z * p.z); }
+
     inline double distance(const WorldPos& a, const WorldPos& b) {
         WorldPos c = {b.x - a.x, b.y - a.y, b.z - a.z};
         return length(c);
     }
-    
+
     inline float doubleToAU(const double& d) {
         const double AU = d / 1.495978707e11;
         return static_cast<float>(AU);
     }
-    
 } // Caelus::Math
 
 

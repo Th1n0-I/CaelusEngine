@@ -155,7 +155,7 @@ int main() {
     
     {
         auto code = readFile("shaders/Atmosphere.frag.spv");
-        atmosphereShader = renderer.createFullScreenShader(code, sizeof(Caelus::AtmosphereConstants), VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA);
+        atmosphereShader = renderer.createFullScreenShader(code, sizeof(Caelus::AtmosphereConstants), VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA, true, 2);
     }
 
     {
@@ -167,7 +167,7 @@ int main() {
     unsigned char black[4] = {0, 0, 0, 255};
     auto whiteTexture = renderer.createTexture(white, 1, 1, VK_FORMAT_R8G8B8A8_SRGB, 4, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
     auto blackTexture = renderer.createTexture(black, 1, 1, VK_FORMAT_R8G8B8A8_SRGB, 4, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT);
-    auto starTexture = renderer.createTexture("C:/Users/volts/Downloads/starmap_2020_16k.png");
+    auto starTexture = renderer.createTexture(ASSETS_DIR "/Textures/starmap_2020_16k.png");
     if (starTexture.descriptorSet == VK_NULL_HANDLE) {starTexture = blackTexture;}
 
     for (auto& body : bodies) {
@@ -180,13 +180,16 @@ int main() {
     
 
     
-    std::vector<Caelus::Textures::Texture> atmosphereLUTs;
+    std::vector<Caelus::Textures::Texture> atmoODLUTs;
+    std::vector<Caelus::Textures::Texture> atmoMultiscatterLUTs;
     
     for (auto& body : bodies) {
         if (!body.atmosphereParams) continue;
-        auto tex = Caelus::generateODLUT(256, 512, body.atmosphereParams.value(), renderer);
-        body.atmosphereLUTindex = atmosphereLUTs.size();
-        atmosphereLUTs.push_back(tex);
+        auto ODTex = Caelus::generateODLUT(256, 512, body.atmosphereParams.value(), renderer);
+        auto msTex = Caelus::generateMultiScatterLUT(32, 32, body.atmosphereParams.value(), renderer);
+        body.atmosphereLUTindex = atmoODLUTs.size();
+        atmoODLUTs.push_back(ODTex);
+        atmoMultiscatterLUTs.push_back(msTex);
     }
     
     int followIndex = 3;
@@ -426,6 +429,7 @@ int main() {
             ZoneScopedN("Body Rendering");
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline());
             for (const Caelus::Body& body : bodies) {
+                if (body.name == "Jupiter") continue;
                 const Vector3 renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
                 const float r = body.radius;
 
@@ -477,7 +481,7 @@ int main() {
                 auto renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
                 
                 Caelus::AtmosphereConstants consts{};
-                consts.BodyPosition = renderPos; consts.Radius = body.radius;
+                consts.BodyPosition = renderPos; consts.Radius = body.atmosphereParams.value().radius;
                 consts.Rayleigh = atmosphere.rayleighBeta; consts.FOV = camera.GetFov();
                 consts.SunPos = sunRenderPos; consts.E = GetBrightnessFromWorldPos(body.worldPosition, exposure);
                 consts.camera = {camera.GetPitch(), camera.GetYaw()};
@@ -488,7 +492,7 @@ int main() {
                 consts.mieBeta = atmosphere.mieBeta;
                 consts.mieG = atmosphere.mieG;
                 
-                renderer.DrawFullScreenShader(atmosphereShader, &consts, atmosphereLUTs[body.atmosphereLUTindex]);
+                renderer.DrawFullScreenShader(atmosphereShader, &consts, atmoODLUTs[body.atmosphereLUTindex], atmoMultiscatterLUTs[body.atmosphereLUTindex]);
             }
         }
         

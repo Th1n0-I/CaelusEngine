@@ -127,6 +127,15 @@ namespace Caelus {
         jupiter.texturePath = ASSETS_DIR "/Textures/8k_jupiter.jpg";
         jupiter.axialTilt = 3.13 * deg;
         jupiter.rotationalPeriod = 9.925 * hour;
+        jupiter.atmosphereParams = {
+            .radius              = 0,
+            .atmosphereHeight    = 70'000'000,
+            .rayleighScaleHeight = 15'000'000,
+            .mieScaleHeight      = 5'000'000,
+            .mieBeta             = 0.08e-5,
+            .mieG                = 0.7,
+            .rayleighBeta        = {0.45e-6, 0.38e-6, 0.27e-6}, 
+        };
 
         // ---- index 13
         Caelus::Body saturn;

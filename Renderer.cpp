@@ -382,7 +382,7 @@ namespace Caelus {
         vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
     }
 
-    FullScreenShader Renderer::createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize, VkBlendFactor srcColorBlendFactor, VkBlendFactor dstColorBlendFactor, bool renderToHDR) {
+    FullScreenShader Renderer::createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize, VkBlendFactor srcColorBlendFactor, VkBlendFactor dstColorBlendFactor, bool renderToHDR, int textureCount) {
         FullScreenShader s;
         s.pushSize = constsSize;
         
@@ -400,7 +400,7 @@ namespace Caelus {
             .depthWrite = false,
             .alphaBlend = true,
             .pushConstantSize = constsSize,
-            .setLayouts = {m_textureSetLayout},
+            .setLayouts = std::vector(textureCount, m_textureSetLayout),
             .depthFormat = renderToHDR ? VK_FORMAT_D32_SFLOAT : VK_FORMAT_UNDEFINED,
         };
         
@@ -419,6 +419,13 @@ namespace Caelus {
     void Renderer::DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants,
         Textures::Texture tex) const {
         vkCmdBindDescriptorSets(m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, shader.layout, 0, 1, &tex.descriptorSet, 0, nullptr);
+        DrawFullScreenShader(shader, pushConstants);
+    }
+    
+    void Renderer::DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants,
+                                    Textures::Texture tex0, Textures::Texture tex1) {
+        VkDescriptorSet sets[2] = {tex0.descriptorSet, tex1.descriptorSet};
+        vkCmdBindDescriptorSets(m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, shader.layout, 0, 2, sets, 0, nullptr);
         DrawFullScreenShader(shader, pushConstants);
     }
 
@@ -494,12 +501,12 @@ namespace Caelus {
         
         VkDescriptorPoolSize descriptorPoolSize{
             .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            .descriptorCount = 16
+            .descriptorCount = 64
         };
         
         VkDescriptorPoolCreateInfo descriptorPoolInfo{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, 
-            .maxSets = 16, 
+            .maxSets = 64, 
             .poolSizeCount = 1,
             .pPoolSizes = &descriptorPoolSize,
         };

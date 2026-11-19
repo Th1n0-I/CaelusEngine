@@ -17,6 +17,9 @@ namespace Caelus {
         float mieBeta = 0;
         float mieG = 0;
         Math::Vector3 rayleighBeta = Math::Vector3(0, 0, 0);
+        std::vector<float> m_data;
+        int m_width;
+        int m_height;
     };
     
     struct AtmosphereConstants {
@@ -31,7 +34,8 @@ namespace Caelus {
         float mieBeta;
     };
 
-    Textures::Texture generateODLUT(int width, int height, AtmosphereParams params, Renderer& renderer);
+    Textures::Texture generateODLUT(int width, int height, AtmosphereParams& params, Renderer& renderer);
+    Textures::Texture generateMultiScatterLUT(int width, int height, AtmosphereParams& params, Renderer& renderer);
 } // Caelus
 
 #endif //CAELUSENGINE_ATMOSPHERE_H
