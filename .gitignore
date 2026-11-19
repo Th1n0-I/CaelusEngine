@@ -56,3 +56,5 @@ cmake-build-*/
 
 # IntelliJ build output
 out/
+
+Assets/

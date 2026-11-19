@@ -184,7 +184,7 @@ int main() {
     
     for (auto& body : bodies) {
         if (!body.atmosphereParams) continue;
-        auto tex = Caelus::GenerateLUT(256, 512, body.atmosphereParams.value(), renderer);
+        auto tex = Caelus::generateODLUT(256, 512, body.atmosphereParams.value(), renderer);
         body.atmosphereLUTindex = atmosphereLUTs.size();
         atmosphereLUTs.push_back(tex);
     }
