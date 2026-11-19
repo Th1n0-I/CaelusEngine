@@ -90,3 +90,5 @@ add_shader(CaelusEngine Line.frag)
 add_shader(CaelusEngine Fullscreen.vert)
 add_shader(CaelusEngine Atmosphere.frag)
 add_shader(CaelusEngine Tonemap.frag)
+
+target_compile_definitions(CaelusEngine PRIVATE ASSETS_DIR="${CMAKE_SOURCE_DIR}/assets")

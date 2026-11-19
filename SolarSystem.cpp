@@ -25,7 +25,7 @@ namespace Caelus {
         sun.radius = 695700.0 * km;
         sun.emissive = true;
         sun.gravParam = 1.32712440018e11 * km3;
-        sun.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_sun.jpg";
+        sun.texturePath = ASSETS_DIR "/Textures/8k_sun.jpg";
         sun.axialTilt = 7.25 * deg;
         sun.rotationalPeriod = 609.12 * hour; // ~25.4 days at the equator
 
@@ -43,7 +43,7 @@ namespace Caelus {
             (77.45779628 - 48.33076593) * deg, // w  = long.peri - long.node
             48.33076593 * deg
         };
-        mercury.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_mercury.jpg";
+        mercury.texturePath = ASSETS_DIR "/Textures/8k_mercury.jpg";
         mercury.axialTilt = 0.034 * deg;
         mercury.rotationalPeriod = 1407.6 * hour; // ~58.6 days, 3 spins per 2 orbits
 
@@ -61,7 +61,7 @@ namespace Caelus {
             (131.60246718 - 76.67984255) * deg,
             76.67984255 * deg
         };
-        venus.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/4k_venus_atmosphere.jpg";
+        venus.texturePath = ASSETS_DIR "/Textures/8k_venus_surface.jpg";
         venus.axialTilt = 177.36 * deg; // tilted almost upside down, which makes it spin backwards (retrograde)
         venus.rotationalPeriod = 5832.5 * hour; // ~243 days, longer than its year
 
@@ -79,7 +79,7 @@ namespace Caelus {
             (102.93768193 - 0.0) * deg,
             0.0 * deg
         };
-        earth.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_earth_daymap.jpg";
+        earth.texturePath = ASSETS_DIR "/Textures/8k_earth_daymap.jpg";
         earth.axialTilt = 23.44 * deg;
         earth.rotationalPeriod = 23.9345 * hour;
         earth.atmosphereParams = {
@@ -106,7 +106,7 @@ namespace Caelus {
             (-23.94362959 - 49.55953891) * deg,
             49.55953891 * deg
         };
-        mars.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_mars.jpg";
+        mars.texturePath = ASSETS_DIR "/Textures/8k_mars.jpg";
         mars.axialTilt = 25.19 * deg;
         mars.rotationalPeriod = 24.6229 * hour;
 
@@ -124,7 +124,7 @@ namespace Caelus {
             (14.72847983 - 100.47390909) * deg,
             100.47390909 * deg
         };
-        jupiter.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_jupiter.jpg";
+        jupiter.texturePath = ASSETS_DIR "/Textures/8k_jupiter.jpg";
         jupiter.axialTilt = 3.13 * deg;
         jupiter.rotationalPeriod = 9.925 * hour;
 
@@ -142,7 +142,7 @@ namespace Caelus {
             (92.59887831 - 113.66242448) * deg,
             113.66242448 * deg
         };
-        saturn.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_saturn.jpg";
+        saturn.texturePath = ASSETS_DIR "/Textures/8k_saturn.jpg";
         saturn.axialTilt = 26.73 * deg;
         saturn.rotationalPeriod = 10.656 * hour;
 
@@ -160,7 +160,7 @@ namespace Caelus {
             (170.95427630 - 74.01692503) * deg,
             74.01692503 * deg
         };
-        uranus.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/2k_uranus.jpg";
+        uranus.texturePath = ASSETS_DIR "/Textures/2k_uranus.jpg";
         uranus.axialTilt = 97.77 * deg; // rolls around the Sun on its side
         uranus.rotationalPeriod = 17.24 * hour;
 
@@ -178,7 +178,7 @@ namespace Caelus {
             (44.96476227 - 131.78422574) * deg,
             131.78422574 * deg
         };
-        neptune.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/2k_neptune.jpg";
+        neptune.texturePath = ASSETS_DIR "/Textures/2k_neptune.jpg";
         neptune.axialTilt = 28.32 * deg;
         neptune.rotationalPeriod = 16.11 * hour;
 
@@ -189,7 +189,7 @@ namespace Caelus {
         moon.radius = 1737.4 * km;
         moon.gravParam = 4902.8 * km3;
         moon.orbit = Caelus::KeplerData{384400.0 * km, 0.0549, 5.145 * deg, 0.0, 0.0, 0.0};
-        moon.texturePath = "C:/Users/volts/Documents/SolarSystemTextures/8k_moon.jpg";
+        moon.texturePath = ASSETS_DIR "/Textures/8k_moon.jpg";
         moon.axialTilt = 1.54 * deg;
         // Tidally locked: one spin per orbit. Uses the same period formula as the orbit
         // (2*pi*sqrt(a^3/mu) with Earth's mu), so it stays locked exactly in the sim.
