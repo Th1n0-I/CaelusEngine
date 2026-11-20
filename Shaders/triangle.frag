@@ -14,6 +14,7 @@ layout(push_constant) uniform Consts{
 } pc;
 
 layout(set = 0, binding = 0) uniform sampler2D starMap;
+layout(set = 1, binding = 0) uniform sampler2D atmoTransmittanceLUT;
 
 vec2 uvFromDirection(vec3 d) {
     return vec2(0.5 + atan(d.z, d.x) / (2.0 * 3.1415926535), 0.5 - asin(d.y) / 3.1415926535);
@@ -51,8 +52,10 @@ void main(){
     
     vec3 baseCol = texCol.rgb;
     
-    
     vec3 toSun = normalize(pc.sunPosEmissive.xyz - fragPos);
+
+    vec3 T = texture(atmoTransmittanceLUT, vec2(dot(normal, toSun) * 0.5 + 0.5, 0.5)).rgb;
+    
     float t = max(dot(normal, toSun), 0.0);
-    outColor = vec4(baseCol * pc.E * t / 3.1415926535, 1.0);
+    outColor = vec4(baseCol * pc.E * t / 3.1415926535 * T, 1.0);
 }

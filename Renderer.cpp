@@ -519,7 +519,7 @@ namespace Caelus {
             .frag = fragModule,
             .vertexStride = sizeof(Vertex),
             .pushConstantSize = sizeof(Consts),
-            .setLayouts = {m_textureSetLayout},
+            .setLayouts = {m_textureSetLayout, m_textureSetLayout},
         };
         createPipeline(m_context.device, m_swapChain.HDRFormat, mainDesc, m_pipelineLayout, m_pipeline);
 

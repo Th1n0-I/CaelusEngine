@@ -199,4 +199,20 @@ namespace Caelus {
         }
         return renderer.createTexture(data.data(), width, height, VK_FORMAT_R32G32B32A32_SFLOAT, 16, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     }
+    
+    Textures::Texture generateGroundTransmittanceLUT(int width, AtmosphereParams& params, Renderer& renderer) {
+        std::vector<float> data;
+        data.reserve(width * 4);
+        data.resize(width * 4);
+        for (int w = 0; w < width; w++) {
+            float cos = (w + 0.5) / width * 2 - 1;
+            Vector2 od = sampleODLUT(0, cos, params);
+            Vector3 T = exp(-(params.rayleighBeta * od.x + (params.mieAbsorption + params.mieBeta) * od.y));
+            data[w * 4 + 0] = T.x;
+            data[w * 4 + 1] = T.y;
+            data[w * 4 + 2] = T.z;
+            data[w * 4 + 3] = 1;
+        }
+        return renderer.createTexture(data.data(), width, 1, VK_FORMAT_R32G32B32A32_SFLOAT, 16, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    }
 } // Caelus

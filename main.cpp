@@ -182,14 +182,17 @@ int main() {
     
     std::vector<Caelus::Textures::Texture> atmoODLUTs;
     std::vector<Caelus::Textures::Texture> atmoMultiscatterLUTs;
+    std::vector<Caelus::Textures::Texture> atmoGroundTransmittanceLUTs;
     
     for (auto& body : bodies) {
         if (!body.atmosphereParams) continue;
         auto ODTex = Caelus::generateODLUT(256, 512, body.atmosphereParams.value(), renderer);
         auto msTex = Caelus::generateMultiScatterLUT(32, 32, body.atmosphereParams.value(), renderer);
+        auto groundTex = Caelus::generateGroundTransmittanceLUT(256, body.atmosphereParams.value(), renderer);
         body.atmosphereLUTindex = atmoODLUTs.size();
         atmoODLUTs.push_back(ODTex);
         atmoMultiscatterLUTs.push_back(msTex);
+        atmoGroundTransmittanceLUTs.push_back(groundTex);
     }
     
     int followIndex = 3;
@@ -430,7 +433,8 @@ int main() {
             consts.bodyPosRadius = {0, 0, 0, 1e13f};
             consts.sunPosEmissive.w = 2;
             consts.E = exposure * starLuminance;
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.skyPipelineLayout(), 0, 1, &starTexture.descriptorSet, 0, nullptr);
+            VkDescriptorSet descriptors[2] = {starTexture.descriptorSet, whiteTexture.descriptorSet};
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.skyPipelineLayout(), 0, 2, descriptors, 0, nullptr);
             vkCmdPushConstants(cmd, renderer.skyPipelineLayout(),
                                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Caelus::Consts),
                                    &consts);
@@ -461,7 +465,13 @@ int main() {
                 else consts.E = GetBrightnessFromWorldPos(body.worldPosition, exposure);
                 
                 const auto& tex = body.textureIndex != Caelus::Body::noParent ? textures[body.textureIndex] : whiteTexture;
-                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 0, 1, &tex.descriptorSet, 0, nullptr);
+                Caelus::Textures::Texture atmoTex;
+                
+                if (!body.atmosphereParams) atmoTex = whiteTexture;
+                else atmoTex = atmoGroundTransmittanceLUTs[body.atmosphereLUTindex];
+                
+                VkDescriptorSet descriptors[2] = {tex.descriptorSet, atmoTex.descriptorSet};                
+                vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 0, 2, descriptors, 0, nullptr);
                 
                 vkCmdPushConstants(cmd, renderer.pipelineLayout(),
                                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Caelus::Consts),

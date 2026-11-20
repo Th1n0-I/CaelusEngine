@@ -118,8 +118,6 @@ void main(){
         vec3 sigmaT = pc.Rayleigh * localDensity.x + mieExtinction * localDensity.y;
         vec3 stepLen = (1.0 - exp(-sigmaT * stepSize)) / max(sigmaT, vec3(1e-8));
         
-        
-
         vec2 LUTuv = vec2((distance(pos, pc.BodyPosition) - pc.Radius) / pc.atmosphereHeight, dot(normalize(pos - pc.BodyPosition), sunDir) * 0.5 + 0.5);
         vec3 multiscatter = textureLod(multiscatterLUT, LUTuv, 0.0).rgb;
         
@@ -140,8 +138,6 @@ void main(){
         //How much light gets absorbed.
         vec3 sunTransmittance = exp(-(pc.Rayleigh * sunOD.r + mieExtinction * sunOD.g));
         vec3 transmittance = viewTransmittance * sunTransmittance;
-        
-        
         
         if(isnan(sumTransmittance) || isinf(sumTransmittance)){
             outColor = vec4(1, 0, 1, 0);
