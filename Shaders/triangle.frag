@@ -32,7 +32,7 @@ void main(){
         float dec = asin(eq.z);
         vec2 skyUV = vec2(0.5 - ra / (2.0 * 3.1415926535), 0.5 - dec / 3.1415926535);
         
-        outColor = vec4(texture(starMap, skyUV).rgb * 0.5, 1.0);
+        outColor = vec4(texture(starMap, skyUV).rgb * pc.E, 1.0);
         return;
     }
 
@@ -42,7 +42,7 @@ void main(){
     vec2 uv = uvFromDirection(surfaceDir);
     
     if(pc.sunPosEmissive.w > 0.5){
-        outColor = vec4(texture(starMap, uv).rgb, 1.0);;
+        outColor = vec4(texture(starMap, uv).rgb * pc.E, 1.0);
         return;
     }
     

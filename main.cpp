@@ -199,10 +199,13 @@ int main() {
     struct OrbitRange { uint32_t first, count; };
     std::vector<OrbitRange> orbitRanges;
 
+    // Settings
     double time = 0, timeScale = 1, sunIntensity = 16.8;
     float EV = 15;
     std::string overlayText;
-    float overlayTimer = 0.0f;
+    float overlayTimer = 0.0f, starLuminance = 1.0f;
+    bool drawOrbits = true, drawLabels = true;
+    
     while (!glfwWindowShouldClose(window)) {
         lineVerts.clear();
         orbitRanges.clear();
@@ -268,6 +271,7 @@ int main() {
                     ImGui::ColorPicker3("Clear Color", &clearColor[0]);
                     ImGui::EndMenu();
                 }
+                ImGui::DragFloat("Star Luminance", &starLuminance, 0.01f);
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Camera")) {
@@ -284,6 +288,12 @@ int main() {
             }
             if (ImGui::BeginMenu("AtmosDebug")) {
                 ImGui::DragScalarN("Sun Intensity", ImGuiDataType_Double, &sunIntensity, 1, 0.1f);
+                ImGui::EndMenu();
+            }
+            
+            if (ImGui::BeginMenu("UI")) {
+                ImGui::Checkbox("Orbit Lines", &drawOrbits);
+                ImGui::Checkbox("Planet Labels", &drawLabels);
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
@@ -332,7 +342,7 @@ int main() {
         const float aspect = static_cast<float>(renderer.swapChain().extent.width)
             / static_cast<float>(renderer.swapChain().extent.height);
         Matrix4x4 viewProj = camera.GetPerspective(aspect, 0.1f, 100.0f) * camera.GetView();
-        {
+        if (drawOrbits || drawLabels) {
             ZoneScopedN("Orbit lines");
             ImDrawList* drawList = ImGui::GetForegroundDrawList();
             const float W = renderer.swapChain().extent.width;
@@ -364,7 +374,7 @@ int main() {
                     }
                 }
 
-                if (body.orbit && drawOrbit) {
+                if (body.orbit && drawOrbit && drawOrbits) {
                     Vector4 lastClip{};
                     
                     double n = sqrt(bodies[body.parent].gravParam.value() / (body.orbit.value().semiMajorAxis * body.orbit.value().semiMajorAxis * body.orbit.value().semiMajorAxis));
@@ -386,7 +396,7 @@ int main() {
                     orbitRanges.push_back({first, (uint32_t)(lineVerts.size() / 3) - first});
                 }
 
-                if (drawPlanetData) {
+                if (drawPlanetData && drawLabels) {
                     drawList->AddCircle({screenX, screenY}, 6.0f, IM_COL32(80, 150, 255, 255));
                     drawList->AddText({screenX, screenY - 8.0f}, IM_COL32_WHITE, body.name.c_str());
                 }
@@ -419,6 +429,7 @@ int main() {
             for (int i = 0; i < 4; i++) for (int j = 0; j < 4; j++) consts.matrix[i][j] = matrix.m[i][j];
             consts.bodyPosRadius = {0, 0, 0, 1e13f};
             consts.sunPosEmissive.w = 2;
+            consts.E = exposure * starLuminance;
             vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.skyPipelineLayout(), 0, 1, &starTexture.descriptorSet, 0, nullptr);
             vkCmdPushConstants(cmd, renderer.skyPipelineLayout(),
                                    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Caelus::Consts),
@@ -447,7 +458,8 @@ int main() {
                 consts.spin[0] = (float)body.axialTilt;
                 consts.spin[1] = (float)spin;
                 
-                consts.E = GetBrightnessFromWorldPos(body.worldPosition, exposure);
+                if (emissive) consts.E = GetBrightnessFromWorldPos({0, body.radius, 0}, exposure) / std::numbers::pi;
+                else consts.E = GetBrightnessFromWorldPos(body.worldPosition, exposure);
                 
                 const auto& tex = body.textureIndex != Caelus::Body::noParent ? textures[body.textureIndex] : whiteTexture;
                 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 0, 1, &tex.descriptorSet, 0, nullptr);
