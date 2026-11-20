@@ -136,7 +136,7 @@ namespace Caelus {
             Vector2 localDensity = densityAtPoint(alt, params);
             
             viewOpticalDepth += localDensity * stepSize;
-            Vector3 transmittance = exp(-(params.rayleighBeta * viewOpticalDepth.x + params.mieBeta * 1.11 * viewOpticalDepth.y));
+            Vector3 transmittance = exp(-(params.rayleighBeta * viewOpticalDepth.x + (params.mieAbsorption + params.mieBeta) * viewOpticalDepth.y));
             Vector3 scatter = params.rayleighBeta * localDensity.x + params.mieBeta * localDensity.y;
             f += scatter * transmittance * stepSize;
             
@@ -145,7 +145,7 @@ namespace Caelus {
             
             float sunCosine = dot(normalize(startPos), sunDir);
             Vector2 sunOD = sampleODLUT(alt, sunCosine, params);
-            Vector3 TSun = exp(-(params.rayleighBeta * sunOD.x + params.mieBeta * 1.11 * sunOD.y));
+            Vector3 TSun = exp(-(params.rayleighBeta * sunOD.x + (params.mieAbsorption + params.mieBeta) * sunOD.y));
             
             L += scatter * transmittance * TSun * stepSize / (std::numbers::pi * 4);
         }

@@ -440,7 +440,6 @@ int main() {
             ZoneScopedN("Body Rendering");
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipeline());
             for (const Caelus::Body& body : bodies) {
-                if (body.name == "Jupiter") continue;
                 const Vector3 renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
                 const float r = body.radius;
 
@@ -492,19 +491,18 @@ int main() {
                 auto& atmosphere = body.atmosphereParams.value();
                 auto renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
                 
-                Caelus::AtmosphereConstants consts{};
-                consts.BodyPosition = renderPos; consts.Radius = body.atmosphereParams.value().radius;
-                consts.Rayleigh = atmosphere.rayleighBeta; consts.FOV = camera.GetFov();
-                consts.SunPos = sunRenderPos; consts.E = GetBrightnessFromWorldPos(body.worldPosition, exposure);
-                consts.camera = {camera.GetPitch(), camera.GetYaw()};
-                consts.res = {static_cast<float>(renderer.swapChain().extent.width), static_cast<float>(renderer.swapChain().extent.height)};
-                consts.atmosphereHeight = atmosphere.atmosphereHeight;
-                consts.scaleHeight = atmosphere.rayleighScaleHeight;
-                consts.mieScaleHeight = atmosphere.mieScaleHeight;
-                consts.mieBeta = atmosphere.mieBeta;
-                consts.mieG = atmosphere.mieG;
+                Caelus::AtmosphereConstants atmoConsts{};
+                atmoConsts.BodyPosition = renderPos;                    atmoConsts.Radius = body.atmosphereParams.value().radius;
+                atmoConsts.Rayleigh = atmosphere.rayleighBeta;          atmoConsts.FOV = camera.GetFov();
+                atmoConsts.SunPos = sunRenderPos;                       atmoConsts.E = GetBrightnessFromWorldPos(body.worldPosition, exposure);
+                atmoConsts.mieBeta = atmosphere.mieBeta;                atmoConsts.mieG = atmosphere.mieG;
+                atmoConsts.mieAbsorption = atmosphere.mieAbsorption;    atmoConsts.mieScaleHeight = atmosphere.mieScaleHeight;
+                atmoConsts.camera = {camera.GetPitch(), camera.GetYaw()};
+                atmoConsts.res = {static_cast<float>(renderer.swapChain().extent.width), static_cast<float>(renderer.swapChain().extent.height)};
+                atmoConsts.atmosphereHeight = atmosphere.atmosphereHeight;
+                atmoConsts.scaleHeight = atmosphere.rayleighScaleHeight;
                 
-                renderer.DrawFullScreenShader(atmosphereShader, &consts, atmoODLUTs[body.atmosphereLUTindex], atmoMultiscatterLUTs[body.atmosphereLUTindex]);
+                renderer.DrawFullScreenShader(atmosphereShader, &atmoConsts, atmoODLUTs[body.atmosphereLUTindex], atmoMultiscatterLUTs[body.atmosphereLUTindex]);
             }
         }
         

@@ -87,9 +87,10 @@ namespace Caelus {
             .atmosphereHeight = 100000,
             .rayleighScaleHeight = 8000,
             .mieScaleHeight = 1200,
-            .mieBeta = 21e-6,
             .mieG = 0.76,
             .rayleighBeta = {5.8e-6, 13.5e-6, 33.1e-6},
+            .mieBeta = {21e-6, 21e-6, 21e-6},
+            .mieAbsorption = {2.3e-6, 2.3e-6, 2.3e-6},
         };
 
         // ---- index 5
@@ -128,13 +129,14 @@ namespace Caelus {
         jupiter.axialTilt = 3.13 * deg;
         jupiter.rotationalPeriod = 9.925 * hour;
         jupiter.atmosphereParams = {
-            .radius              = 0,
-            .atmosphereHeight    = 70'000'000,
-            .rayleighScaleHeight = 15'000'000,
-            .mieScaleHeight      = 5'000'000,
-            .mieBeta             = 0.08e-5,
-            .mieG                = 0.7,
-            .rayleighBeta        = {0.45e-6, 0.38e-6, 0.27e-6}, 
+            .radius              = 69'911'000,
+            .atmosphereHeight    = 200'000,
+            .rayleighScaleHeight = 27'000,
+            .mieScaleHeight      = 20'000,
+            .mieG                = 0.6,
+            .rayleighBeta        = {2.9e-6, 6.8e-6, 16e-6}, 
+            .mieBeta             = {5e-5, 5e-5, 5e-5},
+            .mieAbsorption = {2.5e-6, 1e-5, 3e-5}
         };
 
         // ---- index 13

@@ -7,12 +7,11 @@ layout(push_constant) uniform Consts{
     vec3 BodyPosition; float Radius;
     vec3 Rayleigh; float FOV;
     vec3 SunPos; float E;
+    vec3 mieBeta; float mieG;
+    vec3 mieAbsortption; float mieScaleHeight;
     vec2 res; vec2 camera;
     float atmosphereHeight;
     float scaleHeight;
-    float mieScaleHeight;
-    float mieG;
-    float mieBeta;
 } pc;
 
 layout(set = 0, binding = 0) uniform sampler2D sunRayLUT;
@@ -85,8 +84,13 @@ float henyeyGreenstein(float cosTheta, float g){
     return (1.0 / (4.0 * 3.1415926535)) * ((1 - g * g) / pow(1.0 + g * g - 2.0 * g * cosTheta, 1.5));
 }
 
+float avg(vec3 v){
+    return (v.x + v.y + v.z) / 3;
+}
+
 void main(){
     outColor = vec4(0, 0, 0, 1);
+    vec3 mieExtinction = pc.mieBeta + pc.mieAbsortption;
     
     //-Setup-//
     vec3 raydir = getRayDirection();
@@ -95,7 +99,7 @@ void main(){
     vec2 Intersect = getDoubleSphereIntersect(outerIntersect, innerIntersect);
     if(Intersect == vec2(0, 0)) return;
     
-    float stepSize = (Intersect.y - Intersect.x) / 512;
+    float stepSize = (Intersect.y - Intersect.x) / 64;
     
     //-Fields-//
     vec3 inScatteredR = vec3(0);
@@ -104,20 +108,27 @@ void main(){
     float sumTransmittance = 1;
     vec2 viewRayOpticalDepth = vec2(0);
     
-    for(int i = 0; i < 512; i++){
+    for(int i = 0; i < 64; i++){
         // Position and direction to sun
         vec3 pos = raydir * (i * stepSize + Intersect.x + stepSize / 2);
         vec3 sunDir = normalize(pc.SunPos - pos);
         
         vec2 localDensity = densityAtPoint(pos);
-        viewRayOpticalDepth += localDensity * stepSize;
+        
+        vec3 sigmaT = pc.Rayleigh * localDensity.x + mieExtinction * localDensity.y;
+        vec3 stepLen = (1.0 - exp(-sigmaT * stepSize)) / max(sigmaT, vec3(1e-8));
+        
+        
 
         vec2 LUTuv = vec2((distance(pos, pc.BodyPosition) - pc.Radius) / pc.atmosphereHeight, dot(normalize(pos - pc.BodyPosition), sunDir) * 0.5 + 0.5);
         vec3 multiscatter = textureLod(multiscatterLUT, LUTuv, 0.0).rgb;
         
-        vec3 viewTransmittance = exp(-(pc.Rayleigh * viewRayOpticalDepth.x + pc.mieBeta * 1.11 * viewRayOpticalDepth.y));
+        vec3 viewTransmittance = exp(-(pc.Rayleigh * viewRayOpticalDepth.x + mieExtinction * viewRayOpticalDepth.y));
         vec3 scattering = pc.Rayleigh * localDensity.x + pc.mieBeta * localDensity.y;
-        inScatteredMS += scattering * viewTransmittance * multiscatter * stepSize;
+        inScatteredMS += scattering * viewTransmittance * multiscatter * stepLen;
+
+        viewRayOpticalDepth += localDensity * stepSize;
+        sumTransmittance *= avg(exp(-sigmaT * stepSize));
         
         // Early skip on shadowed
         vec2 sunInnerIntersect = raySphereIntersect(sunDir, pos, pc.Radius);
@@ -127,13 +138,18 @@ void main(){
         vec2 sunOD = textureLod(sunRayLUT, LUTuv, 0.0).rg;
         
         //How much light gets absorbed.
-        vec3 tau = pc.Rayleigh * (sunOD.r + viewRayOpticalDepth.x) + (pc.mieBeta * 1.11) * (sunOD.g + viewRayOpticalDepth.y);
-        vec3 transmittance = exp(-tau);
+        vec3 sunTransmittance = exp(-(pc.Rayleigh * sunOD.r + mieExtinction * sunOD.g));
+        vec3 transmittance = viewTransmittance * sunTransmittance;
         
-        sumTransmittance *= exp(-stepSize * localDensity.x * ((pc.Rayleigh.x + pc.Rayleigh.y + pc.Rayleigh.z) / 3));
         
-        inScatteredM += localDensity.y * transmittance * stepSize;
-        inScatteredR += localDensity.x * transmittance * stepSize;
+        
+        if(isnan(sumTransmittance) || isinf(sumTransmittance)){
+            outColor = vec4(1, 0, 1, 0);
+            return;
+        }
+        
+        inScatteredM += localDensity.y * transmittance * stepLen;
+        inScatteredR += localDensity.x * transmittance * stepLen;
     }
     
     float cosTheta = dot(raydir, normalize(pc.SunPos));

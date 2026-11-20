@@ -14,9 +14,10 @@ namespace Caelus {
         float atmosphereHeight = 0;
         float rayleighScaleHeight = 0;
         float mieScaleHeight = 0;
-        float mieBeta = 0;
         float mieG = 0;
         Math::Vector3 rayleighBeta = Math::Vector3(0, 0, 0);
+        Math::Vector3 mieBeta = Math::Vector3(0, 0, 0);
+        Math::Vector3 mieAbsorption = Math::Vector3(0, 0, 0);
         std::vector<float> m_data;
         int m_width;
         int m_height;
@@ -26,12 +27,11 @@ namespace Caelus {
         Math::Vector3 BodyPosition; float Radius;
         Math::Vector3 Rayleigh; float FOV;
         Math::Vector3 SunPos; float E;
+        Math::Vector3 mieBeta; float mieG;
+        Math::Vector3 mieAbsorption; float mieScaleHeight;
         Math::Vector2 res; Math::Vector2 camera;
         float atmosphereHeight;
         float scaleHeight;
-        float mieScaleHeight;
-        float mieG;
-        float mieBeta;
     };
 
     Textures::Texture generateODLUT(int width, int height, AtmosphereParams& params, Renderer& renderer);
