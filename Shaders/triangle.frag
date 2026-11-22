@@ -13,6 +13,12 @@ layout(push_constant) uniform Consts{
     float E;
 } pc;
 
+layout(set = 2, binding = 0) uniform occlusion{
+    ivec4 info; 
+    vec4 sunPosInfo;
+    vec4 occluders[28];
+} occ;
+
 layout(set = 0, binding = 0) uniform sampler2D starMap;
 layout(set = 1, binding = 0) uniform sampler2D atmoTransmittanceLUT;
 

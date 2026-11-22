@@ -43,6 +43,8 @@ namespace Caelus {
         [[nodiscard]] VkPipeline skyPipeline() const { return m_skyPipeline; }
         [[nodiscard]] VkPipelineLayout skyPipelineLayout() const { return m_skyPipelineLayout; }
         [[nodiscard]] Textures::Texture hdrTexture() const { return m_hdrTexture; }
+        [[nodiscard]] VkDescriptorSetLayout occluderSetLayout() const { return m_occluderSetLayout; }
+        [[nodiscard]] VkDescriptorSet occluderSet() const { return m_occluderSet; }
 
         VkCommandBuffer beginFrame(const float clearColor[4]);
         void endScene();
@@ -88,6 +90,8 @@ namespace Caelus {
         VkPipeline m_skyPipeline = VK_NULL_HANDLE;
         VkDescriptorSetLayout m_textureSetLayout = VK_NULL_HANDLE;
         VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
+        VkDescriptorSetLayout m_occluderSetLayout = VK_NULL_HANDLE;
+        VkDescriptorSet m_occluderSet = VK_NULL_HANDLE;
 
         Textures::Texture m_hdrTexture;
 

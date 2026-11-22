@@ -29,6 +29,12 @@ struct TonemapPushConstants {
     float exposure;
 };
 
+struct OccluderConstants {
+    int32_t info[4];
+    Vector4 sunPosInfo;
+    Vector4 Occluders[28];
+};
+
 static float GetBrightnessFromWorldPos(const WorldPos worldPos, float exposure) {
     double d = length(worldPos);
     double E = 128000 * pow(1.0 / doubleToAU(d), 2) * exposure;
@@ -201,6 +207,28 @@ int main() {
     std::vector<float> lineVerts;
     struct OrbitRange { uint32_t first, count; };
     std::vector<OrbitRange> orbitRanges;
+    
+    // Uniform buffer - data that doesn't change per draw. Used since push constants don't guarantee more than 128 bytes of data.
+    Caelus::Buffer OccluderBuffer = renderer.createDynamicBuffer(sizeof(OccluderConstants), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    
+    VkDescriptorBufferInfo bufferInfo{
+        .buffer = OccluderBuffer.handle,
+        .offset = 0,
+        .range = sizeof(OccluderConstants),
+    };
+    
+    VkWriteDescriptorSet descriptorSet{
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .pNext = nullptr,
+        .dstSet = renderer.occluderSet(),
+        .dstBinding = 0,
+        .dstArrayElement = 0,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+        .pBufferInfo = &bufferInfo,
+    };
+    
+    vkUpdateDescriptorSets(renderer.context().device, 1, &descriptorSet, 0, nullptr);
 
     // Settings
     double time = 0, timeScale = 1, sunIntensity = 16.8;
@@ -413,8 +441,13 @@ int main() {
         
         memcpy(lineBuffer.mapped, lineVerts.data(), lineVerts.size() * sizeof(float));
 
+        OccluderConstants occluderConstants{};
+        occluderConstants.info[0] = 3;
         
+        memcpy(OccluderBuffer.mapped, &occluderConstants, sizeof(OccluderConstants));
         
+        VkDescriptorSet occDescriptorSet[1] = {renderer.occluderSet()};
+        vkCmdBindDescriptorSets(renderer.commandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 2, 1, occDescriptorSet, 0, nullptr);
 
         Caelus::Consts consts{};
         consts.res[0] = static_cast<int>(renderer.swapChain().extent.width);
