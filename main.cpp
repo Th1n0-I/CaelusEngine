@@ -435,6 +435,8 @@ int main() {
         }
 
         ImGui::Render();
+        
+        const Vector3 sunRenderPos = toRenderSpace(bodies[0].worldPosition, camera.GetPosition());
 
         VkCommandBuffer cmd = renderer.beginFrame(clearColor);
         if (cmd == VK_NULL_HANDLE) continue;
@@ -442,18 +444,30 @@ int main() {
         memcpy(lineBuffer.mapped, lineVerts.data(), lineVerts.size() * sizeof(float));
 
         OccluderConstants occluderConstants{};
-        occluderConstants.info[0] = 3;
+        occluderConstants.info[0] = 0;
+        
+        occluderConstants.sunPosInfo = {sunRenderPos.x, sunRenderPos.y, sunRenderPos.z, bodies[0].radius};
+        
+        for (const auto& body : bodies) {
+            if (body.parent == Caelus::Body::noParent) continue;
+            if (occluderConstants.info[0] >= 28) break;
+            Vector3 renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
+            float rad = body.radius;
+            occluderConstants.Occluders[occluderConstants.info[0]] = {renderPos.x, renderPos.y, renderPos.z, rad};
+            occluderConstants.info[0]++;
+        }
         
         memcpy(OccluderBuffer.mapped, &occluderConstants, sizeof(OccluderConstants));
         
         VkDescriptorSet occDescriptorSet[1] = {renderer.occluderSet()};
+        
         vkCmdBindDescriptorSets(renderer.commandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 2, 1, occDescriptorSet, 0, nullptr);
 
         Caelus::Consts consts{};
         consts.res[0] = static_cast<int>(renderer.swapChain().extent.width);
         consts.res[1] = static_cast<int>(renderer.swapChain().extent.height);
 
-        const Vector3 sunRenderPos = toRenderSpace(bodies[0].worldPosition, camera.GetPosition());
+        
         const float exposure = 1.0 / (1.2 * powf(2, EV));
 
         {

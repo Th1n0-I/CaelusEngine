@@ -13,11 +13,7 @@ layout(push_constant) uniform Consts{
     float E;
 } pc;
 
-layout(set = 2, binding = 0) uniform occlusion{
-    ivec4 info; 
-    vec4 sunPosInfo;
-    vec4 occluders[28];
-} occ;
+#include "Eclipse.glsl" 
 
 layout(set = 0, binding = 0) uniform sampler2D starMap;
 layout(set = 1, binding = 0) uniform sampler2D atmoTransmittanceLUT;
@@ -63,5 +59,5 @@ void main(){
     vec3 T = texture(atmoTransmittanceLUT, vec2(dot(normal, toSun) * 0.5 + 0.5, 0.5)).rgb;
     
     float t = max(dot(normal, toSun), 0.0);
-    outColor = vec4(baseCol * pc.E * t / 3.1415926535 * T, 1.0);
+    outColor = vec4(baseCol * pc.E * t / 3.1415926535 * T * getEclipseShadowAmount(fragPos), 1.0);
 }

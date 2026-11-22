@@ -78,7 +78,7 @@ function(add_shader TARGET NAME)
             OUTPUT ${OUT}
             COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/shaders
             COMMAND ${GLSLC} ${SRC} -o ${OUT}
-            DEPENDS ${SRC}
+            DEPENDS ${SRC} ${CMAKE_CURRENT_SOURCE_DIR}/shaders/Eclipse.glsl
             COMMENT "Compiling ${NAME}")
     target_sources(${TARGET} PRIVATE ${OUT})
 endfunction()
