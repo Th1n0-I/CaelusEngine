@@ -382,7 +382,7 @@ namespace Caelus {
         vkCmdDrawIndexed(commandBuffer, mesh.indexCount, 1, 0, 0, 0);
     }
 
-    FullScreenShader Renderer::createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize, VkBlendFactor srcColorBlendFactor, VkBlendFactor dstColorBlendFactor, bool renderToHDR, int textureCount) {
+    FullScreenShader Renderer::createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize, const std::vector<VkDescriptorSetLayout>& descriptorSetLayouts, VkBlendFactor srcColorBlendFactor, VkBlendFactor dstColorBlendFactor, bool renderToHDR) {
         FullScreenShader s;
         s.pushSize = constsSize;
         
@@ -400,7 +400,7 @@ namespace Caelus {
             .depthWrite = false,
             .alphaBlend = true,
             .pushConstantSize = constsSize,
-            .setLayouts = std::vector(textureCount, m_textureSetLayout),
+            .setLayouts = descriptorSetLayouts,
             .depthFormat = renderToHDR ? VK_FORMAT_D32_SFLOAT : VK_FORMAT_UNDEFINED,
         };
         

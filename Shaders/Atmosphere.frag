@@ -14,6 +14,8 @@ layout(push_constant) uniform Consts{
     float scaleHeight;
 } pc;
 
+#include "Eclipse.glsl"
+
 layout(set = 0, binding = 0) uniform sampler2D sunRayLUT;
 layout(set = 1, binding = 0) uniform sampler2D multiscatterLUT;
 
@@ -123,7 +125,10 @@ void main(){
         
         vec3 viewTransmittance = exp(-(pc.Rayleigh * viewRayOpticalDepth.x + mieExtinction * viewRayOpticalDepth.y));
         vec3 scattering = pc.Rayleigh * localDensity.x + pc.mieBeta * localDensity.y;
-        inScatteredMS += scattering * viewTransmittance * multiscatter * stepLen;
+        
+        float eclipseTerm = getEclipseShadowAmount(pos);
+        
+        inScatteredMS += scattering * viewTransmittance * multiscatter * stepLen * eclipseTerm;
 
         viewRayOpticalDepth += localDensity * stepSize;
         sumTransmittance *= avg(exp(-sigmaT * stepSize));
@@ -136,7 +141,7 @@ void main(){
         vec2 sunOD = textureLod(sunRayLUT, LUTuv, 0.0).rg;
         
         //How much light gets absorbed.
-        vec3 sunTransmittance = exp(-(pc.Rayleigh * sunOD.r + mieExtinction * sunOD.g));
+        vec3 sunTransmittance = exp(-(pc.Rayleigh * sunOD.r + mieExtinction * sunOD.g)) * eclipseTerm;
         vec3 transmittance = viewTransmittance * sunTransmittance;
         
         if(isnan(sumTransmittance) || isinf(sumTransmittance)){

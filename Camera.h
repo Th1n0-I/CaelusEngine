@@ -24,7 +24,7 @@ namespace Caelus {
 
     private:
         Math::WorldPos m_position{};
-        float m_pitch = 0, m_yaw = 0, m_fov = 1.0472f;
+        float m_pitch = 0, m_yaw = 0, m_fov = 1.0472f; // Default: 1.0472
         double m_distance = 3.0e7;
     };
 }

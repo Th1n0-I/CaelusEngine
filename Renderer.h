@@ -43,6 +43,7 @@ namespace Caelus {
         [[nodiscard]] VkPipeline skyPipeline() const { return m_skyPipeline; }
         [[nodiscard]] VkPipelineLayout skyPipelineLayout() const { return m_skyPipelineLayout; }
         [[nodiscard]] Textures::Texture hdrTexture() const { return m_hdrTexture; }
+        [[nodiscard]] VkDescriptorSetLayout textureSetLayout() const { return m_textureSetLayout; }
         [[nodiscard]] VkDescriptorSetLayout occluderSetLayout() const { return m_occluderSetLayout; }
         [[nodiscard]] VkDescriptorSet occluderSet() const { return m_occluderSet; }
 
@@ -65,7 +66,7 @@ namespace Caelus {
         void destroyMesh(Mesh& mesh);
         static void drawMesh(VkCommandBuffer commandBuffer, Mesh& mesh);
         
-        FullScreenShader createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize, VkBlendFactor srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA, VkBlendFactor dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, bool renderToHDR = true, int textureCount = 1);
+        FullScreenShader createFullScreenShader(std::vector<char> fragCode, uint32_t constsSize, const std::vector<VkDescriptorSetLayout>& descriptorSetLayouts, VkBlendFactor srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA, VkBlendFactor dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, bool renderToHDR = true);
         void DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants) const;
         void DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants, Textures::Texture tex) const;
         void DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants, Textures::Texture tex0,

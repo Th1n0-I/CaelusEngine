@@ -19,7 +19,13 @@ float getEclipseShadowAmount(vec3 pos){
         vec3 occluderPos = occ.occluders[i].xyz;
         float occluderRad = occ.occluders[i].w;
         
+        if(length(occluderPos - sunPos) > length(pos - sunPos)) continue;
+        if(length(occluderPos - pos) > length(sunPos - pos)) continue;
+        
+        
+        
         float occDist = distance(pos, occluderPos);
+        if(length(normalize(occluderPos - pos) - normalize(sunPos - pos)) > (sunRad / sunDist + occluderRad / occDist) * 1.1) continue;
         if (occDist < occluderRad * 1.1) continue;
         
         float occAngSize = asin(occluderRad / occDist);
@@ -32,8 +38,8 @@ float getEclipseShadowAmount(vec3 pos){
         if(occAngSize + sunAngSize <= angOfSep) continue; // No overlap
         if(sunAngSize + angOfSep <= occAngSize) return 0; // Fully blocked, no point checking more.
         if(occAngSize + angOfSep <= sunAngSize){
-            float sunArea = sunRad * sunRad * pi;
-            float occArea = occluderRad * occluderRad * pi;
+            float sunArea = sunAngSize * sunAngSize * pi;
+            float occArea = occAngSize * occAngSize * pi;
             float visibility = (sunArea - occArea) / sunArea;
             minVisibility = min(visibility, minVisibility);
             continue;

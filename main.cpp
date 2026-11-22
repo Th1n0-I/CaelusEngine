@@ -161,12 +161,12 @@ int main() {
     
     {
         auto code = readFile("shaders/Atmosphere.frag.spv");
-        atmosphereShader = renderer.createFullScreenShader(code, sizeof(Caelus::AtmosphereConstants), VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA, true, 2);
+        atmosphereShader = renderer.createFullScreenShader(code, sizeof(Caelus::AtmosphereConstants), std::vector{renderer.textureSetLayout(), renderer.textureSetLayout(), renderer.occluderSetLayout()} ,VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA, true);
     }
 
     {
         auto code = readFile("shaders/Tonemap.frag.spv");
-        tonemapShader = renderer.createFullScreenShader(code, sizeof(float), VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ZERO, false);
+        tonemapShader = renderer.createFullScreenShader(code, sizeof(float), std::vector(1 ,renderer.textureSetLayout()),VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ZERO, false);
     }
 
     unsigned char white[4] = {255, 255, 255, 255};
