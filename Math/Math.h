@@ -201,6 +201,7 @@ namespace Caelus::Math {
 
         WorldPos operator-(const WorldPos& w) const { return {.x = x - w.x, .y = y - w.y, .z = z - w.z}; }
         WorldPos operator*(const double& scale) const { return {.x = x * scale, .y = y * scale, .z = z * scale}; }
+        WorldPos operator/(const double& scale) const {return {.x = x / scale, .y = y / scale, .z = z / scale}; }
     };
 
     inline Vector3 toRenderSpace(const WorldPos& p, const WorldPos& cameraPos) {
@@ -219,6 +220,12 @@ namespace Caelus::Math {
         const double AU = d / 1.495978707e11;
         return static_cast<float>(AU);
     }
+    
+    inline WorldPos normalize(const WorldPos& p) {
+        return p / length(p);
+    }
+    
+    static double dot(const WorldPos& a, const WorldPos& b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 } // Caelus::Math
 
 

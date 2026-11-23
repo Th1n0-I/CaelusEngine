@@ -448,13 +448,45 @@ int main() {
         
         occluderConstants.sunPosInfo = {sunRenderPos.x, sunRenderPos.y, sunRenderPos.z, bodies[0].radius};
         
-        for (const auto& body : bodies) {
-            if (body.parent == Caelus::Body::noParent) continue;
-            if (occluderConstants.info[0] >= 28) break;
-            Vector3 renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
-            float rad = body.radius;
-            occluderConstants.Occluders[occluderConstants.info[0]] = {renderPos.x, renderPos.y, renderPos.z, rad};
-            occluderConstants.info[0]++;
+        {
+            ZoneScopedN("Eclipse Culling");
+            
+            auto added = std::vector(bodies.size(), false);
+            for (int i = 0; i < bodies.size(); i++) {
+                const auto& body1 = bodies[i]; // Body which is being eclipsed
+                if (body1.parent == Caelus::Body::noParent) continue;
+                
+                const auto sunAngSize = bodies[0].radius / length(body1.worldPosition);
+                auto a = WorldPos{} - body1.worldPosition;
+                
+                for (int j = 0; j < bodies.size(); j++  ) {
+                    if (added[j]) continue;
+                    const auto& body2 = bodies[j]; // Body which is eclipsing
+                    if (body2.parent == Caelus::Body::noParent) continue;
+                    if (i == j ) continue;
+                    
+                    if (length(body1.worldPosition) < length(body2.worldPosition)) continue;
+                    
+                    
+                    auto b = body2.worldPosition - body1.worldPosition;
+                    
+                    auto angOfSep = acos(dot(normalize(a), normalize(b)));
+                    
+                    double threshold;
+                    
+                    const auto bodyAngSize = bodies[j].radius / distance(body1.worldPosition, body2.worldPosition);
+                    
+                    if (body1.atmosphereParams.has_value()) threshold = asin((body1.radius + body1.atmosphereParams.value().atmosphereHeight) / distance(body1.worldPosition, body2.worldPosition));
+                    else threshold = asin((body1.radius) / distance(body1.worldPosition, body2.worldPosition)) + sunAngSize + bodyAngSize;
+                    if (threshold < angOfSep) continue;
+                    
+                    added[j] = true;
+                    auto renderPos = toRenderSpace(body2.worldPosition, camera.GetPosition());
+                    occluderConstants.Occluders[occluderConstants.info[0]] = {renderPos.x, renderPos.y, renderPos.z, body2.radius};
+                    occluderConstants.info[0]++;
+                    if (occluderConstants.info[0] >= 28) break;
+                }
+            }
         }
         
         memcpy(OccluderBuffer.mapped, &occluderConstants, sizeof(OccluderConstants));
