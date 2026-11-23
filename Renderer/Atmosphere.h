@@ -6,7 +6,7 @@
 #define CAELUSENGINE_ATMOSPHERE_H
 #include "Renderer.h"
 #include "Textures.h"
-#include "Math/Math.h"
+#include "../Math/Math.h"
 
 namespace Caelus {
     struct AtmosphereParams {

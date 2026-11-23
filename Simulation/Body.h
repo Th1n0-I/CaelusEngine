@@ -7,8 +7,8 @@
 #include <optional>
 #include <string>
 
-#include "Atmosphere.h"
-#include "Math/Math.h"
+#include "../Renderer/Atmosphere.h"
+#include "../Math/Math.h"
 #include "KeplerOrbit.h"
 
 namespace Caelus {

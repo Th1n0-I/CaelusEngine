@@ -4,7 +4,7 @@
 
 #ifndef CAELUSENGINE_VERTEX_H
 #define CAELUSENGINE_VERTEX_H
-#include "Math/Math.h"
+#include "../Math/Math.h"
 
 namespace Caelus {
     struct Vertex {

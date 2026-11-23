@@ -7,7 +7,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-#include "Math/Math.h"
+#include "../Math/Math.h"
 
 namespace Caelus {
     struct PipelineDesc {

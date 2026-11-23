@@ -6,7 +6,7 @@
 #define CAELUSENGINE_KEPLERORBIT_H
 #include <vector>
 
-#include "Math/Math.h"
+#include "../Math/Math.h"
 
 
 namespace Caelus {

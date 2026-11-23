@@ -11,16 +11,16 @@
 #include <numbers>
 #include <tracy/Tracy.hpp>
 
-#include "Body.h"
-#include "Camera.h"
-#include "Pipeline.h"
-#include "Renderer.h"
-#include "Vertex.h"
+#include "Simulation/Body.h"
+#include "Core/Camera.h"
+#include "Renderer/Pipeline.h"
+#include "Renderer/Renderer.h"
+#include "Renderer/Vertex.h"
 #include "Math/Math.h"
-#include "Mesh.h"
-#include "Primitives.h"
-#include "KeplerOrbit.h"
-#include "SolarSystem.h"
+#include "Renderer/Mesh.h"
+#include "Renderer/Primitives.h"
+#include "Simulation/KeplerOrbit.h"
+#include "Simulation/SolarSystem.h"
 #include "stb_image.h"
 
 using namespace Caelus::Math;

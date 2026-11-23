@@ -38,34 +38,34 @@ target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/
 target_link_libraries(imgui PUBLIC glfw Vulkan::Vulkan)
 
 add_executable(CaelusEngine main.cpp
-        Renderer.cpp
-        Renderer.h
+        Renderer/Renderer.cpp
+        Renderer/Renderer.h
         Math/Math.h
-        Camera.cpp
-        Camera.h
-        VulkanContext.cpp
-        VulkanContext.h
-        SwapChain.cpp
-        SwapChain.h
-        Buffer.cpp
-        Buffer.h
-        Pipeline.cpp
-        Pipeline.h
-        Vertex.h
-        Mesh.h
-        Primitives.cpp
-        Primitives.h
-        Body.h
-        KeplerOrbit.cpp
-        KeplerOrbit.h
-        SolarSystem.cpp
-        SolarSystem.h
-        Textures.cpp
-        Textures.h
-        FullScreenShader.cpp
-        FullScreenShader.h
-        Atmosphere.cpp
-        Atmosphere.h)
+        Core/Camera.cpp
+        Core/Camera.h
+        Renderer/VulkanContext.cpp
+        Renderer/VulkanContext.h
+        Renderer/SwapChain.cpp
+        Renderer/SwapChain.h
+        Renderer/Buffer.cpp
+        Renderer/Buffer.h
+        Renderer/Pipeline.cpp
+        Renderer/Pipeline.h
+        Renderer/Vertex.h
+        Renderer/Mesh.h
+        Renderer/Primitives.cpp
+        Renderer/Primitives.h
+        Simulation/Body.h
+        Simulation/KeplerOrbit.cpp
+        Simulation/KeplerOrbit.h
+        Simulation/SolarSystem.cpp
+        Simulation/SolarSystem.h
+        Renderer/Textures.cpp
+        Renderer/Textures.h
+        Renderer/FullScreenShader.cpp
+        Renderer/FullScreenShader.h
+        Renderer/Atmosphere.cpp
+        Renderer/Atmosphere.h)
 target_link_libraries(CaelusEngine PRIVATE glfw Vulkan::Vulkan imgui TracyClient)
 target_include_directories(CaelusEngine PRIVATE ${stb_SOURCE_DIR})
 

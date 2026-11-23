@@ -5,7 +5,7 @@
 #ifndef CAELUSENGINE_CAMERA_H
 #define CAELUSENGINE_CAMERA_H
 
-#include "Math/Math.h"
+#include "../Math/Math.h"
 
 namespace Caelus {
     class Camera {
