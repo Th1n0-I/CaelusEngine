@@ -65,7 +65,8 @@ add_executable(CaelusEngine main.cpp
         Renderer/FullScreenShader.cpp
         Renderer/FullScreenShader.h
         Renderer/Atmosphere.cpp
-        Renderer/Atmosphere.h)
+        Renderer/Atmosphere.h
+        Renderer/UniformBuffer.h)
 target_link_libraries(CaelusEngine PRIVATE glfw Vulkan::Vulkan imgui TracyClient)
 target_include_directories(CaelusEngine PRIVATE ${stb_SOURCE_DIR})
 

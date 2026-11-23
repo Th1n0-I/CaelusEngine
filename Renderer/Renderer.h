@@ -17,6 +17,7 @@
 #include "Vertex.h"
 #include "Mesh.h"
 #include "Textures.h"
+#include "UniformBuffer.h"
 
 namespace Caelus {
     class Renderer {
@@ -44,8 +45,8 @@ namespace Caelus {
         [[nodiscard]] VkPipelineLayout skyPipelineLayout() const { return m_skyPipelineLayout; }
         [[nodiscard]] Textures::Texture hdrTexture() const { return m_hdrTexture; }
         [[nodiscard]] VkDescriptorSetLayout textureSetLayout() const { return m_textureSetLayout; }
-        [[nodiscard]] VkDescriptorSetLayout occluderSetLayout() const { return m_occluderSetLayout; }
-        [[nodiscard]] VkDescriptorSet occluderSet() const { return m_occluderSet; }
+
+        [[nodiscard]] UniformBuffer occluderBuffer() const { return m_occluderUniformBuffer; }
 
         VkCommandBuffer beginFrame(const float clearColor[4]);
         void endScene();
@@ -72,6 +73,8 @@ namespace Caelus {
         void DrawFullScreenShader(const FullScreenShader& shader, const void* pushConstants, Textures::Texture tex0,
                                   Textures::Texture tex1);
 
+        UniformBuffer createUniformBuffer();
+
     private:
         GLFWwindow* m_window = nullptr;
         VulkanContext m_context;
@@ -91,8 +94,8 @@ namespace Caelus {
         VkPipeline m_skyPipeline = VK_NULL_HANDLE;
         VkDescriptorSetLayout m_textureSetLayout = VK_NULL_HANDLE;
         VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
-        VkDescriptorSetLayout m_occluderSetLayout = VK_NULL_HANDLE;
-        VkDescriptorSet m_occluderSet = VK_NULL_HANDLE;
+
+        UniformBuffer m_occluderUniformBuffer;
 
         Textures::Texture m_hdrTexture;
 

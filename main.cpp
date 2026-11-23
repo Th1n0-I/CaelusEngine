@@ -161,7 +161,7 @@ int main() {
     
     {
         auto code = readFile("shaders/Atmosphere.frag.spv");
-        atmosphereShader = renderer.createFullScreenShader(code, sizeof(Caelus::AtmosphereConstants), std::vector{renderer.textureSetLayout(), renderer.textureSetLayout(), renderer.occluderSetLayout()} ,VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA, true);
+        atmosphereShader = renderer.createFullScreenShader(code, sizeof(Caelus::AtmosphereConstants), std::vector{renderer.textureSetLayout(), renderer.textureSetLayout(), renderer.occluderBuffer().descriptorSetLayout()} ,VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA, true);
     }
 
     {
@@ -220,7 +220,7 @@ int main() {
     VkWriteDescriptorSet descriptorSet{
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
         .pNext = nullptr,
-        .dstSet = renderer.occluderSet(),
+        .dstSet = renderer.occluderBuffer().binding(),
         .dstBinding = 0,
         .dstArrayElement = 0,
         .descriptorCount = 1,
@@ -491,7 +491,7 @@ int main() {
         
         memcpy(OccluderBuffer.mapped, &occluderConstants, sizeof(OccluderConstants));
         
-        VkDescriptorSet occDescriptorSet[1] = {renderer.occluderSet()};
+        VkDescriptorSet occDescriptorSet[1] = {renderer.occluderBuffer().binding()};
         
         vkCmdBindDescriptorSets(renderer.commandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 2, 1, occDescriptorSet, 0, nullptr);
 

@@ -14,6 +14,7 @@
 
 #include "Buffer.h"
 #include "Pipeline.h"
+#include "UniformBuffer.h"
 
 
 namespace Caelus {
@@ -429,6 +430,36 @@ namespace Caelus {
         DrawFullScreenShader(shader, pushConstants);
     }
 
+    UniformBuffer Renderer::createUniformBuffer(){
+        UniformBuffer ub{};
+
+        VkDescriptorSetLayoutBinding binding{
+            .binding = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        };
+
+        VkDescriptorSetLayoutCreateInfo layoutInfo{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+            .bindingCount = 1,
+            .pBindings = &binding,
+        };
+
+        vkCreateDescriptorSetLayout(m_context.device, &layoutInfo, nullptr, &ub.descriptorSetLayout());
+
+        VkDescriptorSetAllocateInfo allocInfo{
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+            .pNext = nullptr,
+            .descriptorPool = m_descriptorPool,
+            .descriptorSetCount = 1,
+            .pSetLayouts = &ub.descriptorSetLayout(),
+        };
+
+        vkAllocateDescriptorSets(m_context.device, &allocInfo, &ub.binding());
+        return ub;
+    }
+
     Renderer::Renderer(GLFWwindow* window, std::vector<char> vertCode, std::vector<char> fragCode, std::vector<char> lineVertCode, std::vector<char> lineFragCode) : m_window(window) {
         VulkanContext context;
 
@@ -503,55 +534,32 @@ namespace Caelus {
             .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             .descriptorCount = 64
         };
-        
-        VkDescriptorPoolSize occluderPoolSize{
+
+        VkDescriptorPoolSize uniformPoolSize{
             .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1
+            .descriptorCount = 8
         };
-        
-        VkDescriptorPoolSize poolSizes[2] = {descriptorPoolSize, occluderPoolSize};
-        
+
+        VkDescriptorPoolSize poolSizes[2] = {descriptorPoolSize, uniformPoolSize};
+
         VkDescriptorPoolCreateInfo descriptorPoolInfo{
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO, 
-            .maxSets = 64, 
+            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+            .maxSets = 64,
             .poolSizeCount = 2,
             .pPoolSizes = poolSizes,
         };
-        
+
         vkCreateDescriptorPool(m_context.device, &descriptorPoolInfo, nullptr, &m_descriptorPool);
         vkCreateDescriptorSetLayout(m_context.device, &layoutInfo, nullptr, &m_textureSetLayout);
-        
-        VkDescriptorSetLayoutBinding occluderBinding{
-            .binding = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-        };
-        
-        VkDescriptorSetLayoutCreateInfo occluderLayoutInfo{
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-            .bindingCount = 1,
-            .pBindings = &occluderBinding,
-        };
 
-        vkCreateDescriptorSetLayout(m_context.device, &occluderLayoutInfo, nullptr, &m_occluderSetLayout);
-        
-        VkDescriptorSetAllocateInfo occluderAllocInfo{
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            .pNext = nullptr,
-            .descriptorPool = m_descriptorPool,
-            .descriptorSetCount = 1,
-            .pSetLayouts = &m_occluderSetLayout,
-        };
-        
-        vkAllocateDescriptorSets(m_context.device, &occluderAllocInfo, &m_occluderSet);
+        m_occluderUniformBuffer = createUniformBuffer();
         
         PipelineDesc mainDesc{
             .vert = vertModule,
             .frag = fragModule,
             .vertexStride = sizeof(Vertex),
             .pushConstantSize = sizeof(Consts),
-            .setLayouts = {m_textureSetLayout, m_textureSetLayout, m_occluderSetLayout},
+            .setLayouts = {m_textureSetLayout, m_textureSetLayout, m_occluderUniformBuffer.descriptorSetLayout()},
         };
         createPipeline(m_context.device, m_swapChain.HDRFormat, mainDesc, m_pipelineLayout, m_pipeline);
 
@@ -811,7 +819,7 @@ namespace Caelus {
 
         vkDestroyDescriptorPool(m_context.device, m_descriptorPool, nullptr);
         vkDestroyDescriptorSetLayout(m_context.device, m_textureSetLayout, nullptr);
-        vkDestroyDescriptorSetLayout(m_context.device, m_occluderSetLayout, nullptr);
+        vkDestroyDescriptorSetLayout(m_context.device, m_occluderUniformBuffer.descriptorSetLayout(), nullptr);
         
         vkDestroyPipeline(m_context.device, m_pipeline, nullptr);
         vkDestroyPipelineLayout(m_context.device, m_pipelineLayout, nullptr);
