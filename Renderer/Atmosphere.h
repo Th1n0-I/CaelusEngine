@@ -22,6 +22,21 @@ namespace Caelus {
         int m_width;
         int m_height;
     };
+
+    struct SingleAtmoParams
+    {
+        Math::Vector3 Rayleigh; float Radius;
+        Math::Vector3 MieBeta; float mieG;
+        Math::Vector3 mieAbsorption; float mieScaleHeight;
+        float atmosphereHeight;
+        float scaleHeight;
+        float padding[2];
+    };
+
+    struct AtmoUboConsts
+    {
+        SingleAtmoParams atmospheres[8];
+    };
     
     struct AtmosphereConstants {
         Math::Vector3 BodyPosition; float Radius;

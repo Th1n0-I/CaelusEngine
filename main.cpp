@@ -157,11 +157,12 @@ int main() {
     
     Caelus::FullScreenShader atmosphereShader;
     Caelus::FullScreenShader tonemapShader;
-    
+
+    auto atmosphereUBO = renderer.createUniformBuffer();
     
     {
         auto code = readFile("shaders/Atmosphere.frag.spv");
-        atmosphereShader = renderer.createFullScreenShader(code, sizeof(Caelus::AtmosphereConstants), std::vector{renderer.textureSetLayout(), renderer.textureSetLayout(), renderer.occluderBuffer().descriptorSetLayout()} ,VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA, true);
+        atmosphereShader = renderer.createFullScreenShader(code, sizeof(Caelus::AtmosphereConstants), std::vector{renderer.textureSetLayout(), renderer.textureSetLayout(), renderer.occluderBuffer().descriptorSetLayout(), atmosphereUBO.descriptorSetLayout()} ,VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_SRC_ALPHA, true);
     }
 
     {
@@ -189,19 +190,47 @@ int main() {
     std::vector<Caelus::Textures::Texture> atmoODLUTs;
     std::vector<Caelus::Textures::Texture> atmoMultiscatterLUTs;
     std::vector<Caelus::Textures::Texture> atmoGroundTransmittanceLUTs;
-    
-    for (auto& body : bodies) {
-        if (!body.atmosphereParams) continue;
-        auto ODTex = Caelus::generateODLUT(256, 512, body.atmosphereParams.value(), renderer);
-        auto msTex = Caelus::generateMultiScatterLUT(32, 32, body.atmosphereParams.value(), renderer);
-        auto groundTex = Caelus::generateGroundTransmittanceLUT(256, body.atmosphereParams.value(), renderer);
-        body.atmosphereLUTindex = atmoODLUTs.size();
-        atmoODLUTs.push_back(ODTex);
-        atmoMultiscatterLUTs.push_back(msTex);
-        atmoGroundTransmittanceLUTs.push_back(groundTex);
+
+    Caelus::Buffer atmoBuffer = renderer.createDynamicBuffer(sizeof(Caelus::AtmoUboConsts), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    {
+        ZoneScopedN("Atmos | LUT | UBO")
+
+        Caelus::AtmoUboConsts consts{};
+
+        for (auto& body : bodies) {
+            if (!body.atmosphereParams) continue;
+            auto ODTex = Caelus::generateODLUT(256, 512, body.atmosphereParams.value(), renderer);
+            auto msTex = Caelus::generateMultiScatterLUT(32, 32, body.atmosphereParams.value(), renderer);
+            auto groundTex = Caelus::generateGroundTransmittanceLUT(256, body.atmosphereParams.value(), renderer);
+            body.atmosphereResourseIndex = atmoODLUTs.size();
+            atmoODLUTs.push_back(ODTex);
+            atmoMultiscatterLUTs.push_back(msTex);
+            atmoGroundTransmittanceLUTs.push_back(groundTex);
+
+            const auto& atmo = body.atmosphereParams.value();
+
+            Caelus::SingleAtmoParams params{};
+            params.atmosphereHeight = atmo.atmosphereHeight;
+            params.mieAbsorption = atmo.mieAbsorption;
+            params.MieBeta = atmo.mieBeta;
+            params.mieScaleHeight = atmo.mieScaleHeight;
+            params.mieG = atmo.mieG;
+            params.Radius = atmo.radius;
+            params.scaleHeight = atmo.rayleighScaleHeight;
+            params.Rayleigh = atmo.rayleighBeta;
+
+            consts.atmospheres[body.atmosphereResourseIndex] = params;
+        }
+
+        memcpy(atmoBuffer.mapped, &consts, sizeof(consts));
+
+        VkDescriptorSet descSet[1] = {atmosphereUBO.binding()};
+
+        vkCmdBindDescriptorSets(renderer.commandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 3, 1, descSet, 0, nullptr);
     }
     
     int followIndex = 3;
+
 
     Caelus::Buffer lineBuffer = renderer.createDynamicBuffer(64 * 1024 * sizeof(float) * 3, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
     std::vector<float> lineVerts;
@@ -547,7 +576,7 @@ int main() {
                 Caelus::Textures::Texture atmoTex;
                 
                 if (!body.atmosphereParams) atmoTex = whiteTexture;
-                else atmoTex = atmoGroundTransmittanceLUTs[body.atmosphereLUTindex];
+                else atmoTex = atmoGroundTransmittanceLUTs[body.atmosphereResourseIndex];
                 
                 VkDescriptorSet descriptors[2] = {tex.descriptorSet, atmoTex.descriptorSet};                
                 vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 0, 2, descriptors, 0, nullptr);
@@ -591,7 +620,7 @@ int main() {
                 atmoConsts.atmosphereHeight = atmosphere.atmosphereHeight;
                 atmoConsts.scaleHeight = atmosphere.rayleighScaleHeight;
                 
-                renderer.DrawFullScreenShader(atmosphereShader, &atmoConsts, atmoODLUTs[body.atmosphereLUTindex], atmoMultiscatterLUTs[body.atmosphereLUTindex]);
+                renderer.DrawFullScreenShader(atmosphereShader, &atmoConsts, atmoODLUTs[body.atmosphereResourseIndex], atmoMultiscatterLUTs[body.atmosphereResourseIndex]);
             }
         }
         

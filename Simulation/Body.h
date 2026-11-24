@@ -29,7 +29,7 @@ namespace Caelus {
         double rotationalPeriod = 0;
         double axialTilt = 0;
         std::optional<AtmosphereParams> atmosphereParams;
-        int atmosphereLUTindex;
+        int atmosphereResourseIndex;
     };
 } // Caelus
 
