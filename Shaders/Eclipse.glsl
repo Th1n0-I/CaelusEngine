@@ -52,7 +52,7 @@ float getEclipseShadowAmount(vec3 pos){
         float occSegment = occAngSize * occAngSize * occTheta / 2 - occAngSize * occAngSize * sin(occTheta) / 2;
         
         float totArea = sunSegment + occSegment;
-        minVisibility = min(1 - totArea / (sunAngSize * sunAngSize * pi), minVisibility) ;
+        minVisibility = min(1 - totArea / (sunAngSize * sunAngSize * pi), minVisibility);
     }
     
     

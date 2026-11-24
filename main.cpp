@@ -192,8 +192,29 @@ int main() {
     std::vector<Caelus::Textures::Texture> atmoGroundTransmittanceLUTs;
 
     Caelus::Buffer atmoBuffer = renderer.createDynamicBuffer(sizeof(Caelus::AtmoUboConsts), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+    
+    
     {
         ZoneScopedN("Atmos | LUT | UBO")
+        
+        VkDescriptorBufferInfo bufferInfo{
+            .buffer = atmoBuffer.handle,
+            .offset = 0,
+            .range = sizeof(Caelus::AtmoUboConsts),
+        };
+    
+        VkWriteDescriptorSet descriptorSet{
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .pNext = nullptr,
+            .dstSet = atmosphereUBO.binding(),
+            .dstBinding = 0,
+            .dstArrayElement = 0,
+            .descriptorCount = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .pBufferInfo = &bufferInfo,
+        };
+    
+        vkUpdateDescriptorSets(renderer.context().device, 1, &descriptorSet, 0, nullptr);
 
         Caelus::AtmoUboConsts consts{};
 
@@ -223,10 +244,6 @@ int main() {
         }
 
         memcpy(atmoBuffer.mapped, &consts, sizeof(consts));
-
-        VkDescriptorSet descSet[1] = {atmosphereUBO.binding()};
-
-        vkCmdBindDescriptorSets(renderer.commandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, renderer.pipelineLayout(), 3, 1, descSet, 0, nullptr);
     }
     
     int followIndex = 3;
@@ -469,6 +486,11 @@ int main() {
 
         VkCommandBuffer cmd = renderer.beginFrame(clearColor);
         if (cmd == VK_NULL_HANDLE) continue;
+        
+        {
+            VkDescriptorSet descSet[1] = {atmosphereUBO.binding()};
+            vkCmdBindDescriptorSets(renderer.commandBuffer(), VK_PIPELINE_BIND_POINT_GRAPHICS, atmosphereShader.layout, 3, 1, descSet, 0, nullptr);
+        }
         
         memcpy(lineBuffer.mapped, lineVerts.data(), lineVerts.size() * sizeof(float));
 

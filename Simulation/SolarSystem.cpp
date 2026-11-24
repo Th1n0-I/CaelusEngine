@@ -200,7 +200,7 @@ namespace Caelus {
         moon.radius = 1737.4 * km;
         moon.gravParam = 4902.8 * km3;
         moon.orbit = Caelus::KeplerData{384400.0 * km, 0.0549, 5.145 * deg, 0.0, 0.0, 0.0};
-        moon.texturePath = ASSETS_DIR "/Textures    /8k_moon.jpg";
+        moon.texturePath = ASSETS_DIR "/Textures/8k_moon.jpg";
         moon.axialTilt = 1.54 * deg;
         // Tidally locked: one spin per orbit. Uses the same period formula as the orbit
         // (2*pi*sqrt(a^3/mu) with Earth's mu), so it stays locked exactly in the sim.
