@@ -632,16 +632,12 @@ int main() {
                 auto renderPos = toRenderSpace(body.worldPosition, camera.GetPosition());
                 
                 Caelus::AtmosphereConstants atmoConsts{};
-                atmoConsts.BodyPosition = renderPos;                    atmoConsts.Radius = body.atmosphereParams.value().radius;
-                atmoConsts.Rayleigh = atmosphere.rayleighBeta;          atmoConsts.FOV = camera.GetFov();
+                atmoConsts.BodyPosition = renderPos;                    atmoConsts.FOV = camera.GetFov();
                 atmoConsts.SunPos = sunRenderPos;                       atmoConsts.E = GetBrightnessFromWorldPos(body.worldPosition, exposure);
-                atmoConsts.mieBeta = atmosphere.mieBeta;                atmoConsts.mieG = atmosphere.mieG;
-                atmoConsts.mieAbsorption = atmosphere.mieAbsorption;    atmoConsts.mieScaleHeight = atmosphere.mieScaleHeight;
                 atmoConsts.camera = {camera.GetPitch(), camera.GetYaw()};
                 atmoConsts.res = {static_cast<float>(renderer.swapChain().extent.width), static_cast<float>(renderer.swapChain().extent.height)};
-                atmoConsts.atmosphereHeight = atmosphere.atmosphereHeight;
-                atmoConsts.scaleHeight = atmosphere.rayleighScaleHeight;
-                
+                atmoConsts.indx = body.atmosphereResourseIndex;
+
                 renderer.DrawFullScreenShader(atmosphereShader, &atmoConsts, atmoODLUTs[body.atmosphereResourseIndex], atmoMultiscatterLUTs[body.atmosphereResourseIndex]);
             }
         }

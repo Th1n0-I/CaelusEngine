@@ -39,14 +39,10 @@ namespace Caelus {
     };
     
     struct AtmosphereConstants {
-        Math::Vector3 BodyPosition; float Radius;
-        Math::Vector3 Rayleigh; float FOV;
+        Math::Vector3 BodyPosition; float FOV;
         Math::Vector3 SunPos; float E;
-        Math::Vector3 mieBeta; float mieG;
-        Math::Vector3 mieAbsorption; float mieScaleHeight;
         Math::Vector2 res; Math::Vector2 camera;
-        float atmosphereHeight;
-        float scaleHeight;
+        int indx;
     };
 
     Textures::Texture generateODLUT(int width, int height, AtmosphereParams& params, Renderer& renderer);
