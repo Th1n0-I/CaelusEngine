@@ -48,6 +48,8 @@ namespace Caelus {
     Textures::Texture generateODLUT(int width, int height, AtmosphereParams& params, Renderer& renderer);
     Textures::Texture generateMultiScatterLUT(int width, int height, AtmosphereParams& params, Renderer& renderer);
     Textures::Texture generateGroundTransmittanceLUT(int width, AtmosphereParams& params, Renderer& renderer);
+    
+    bool DrawAtmoInspector(AtmosphereParams& params);
 } // Caelus
 
 #endif //CAELUSENGINE_ATMOSPHERE_H

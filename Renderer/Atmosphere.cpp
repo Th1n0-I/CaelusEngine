@@ -5,6 +5,7 @@
 #include "Atmosphere.h"
 
 #include <algorithm>
+#include <imgui.h>
 #include <numbers>
 #include <vector>
 
@@ -214,5 +215,62 @@ namespace Caelus {
             data[w * 4 + 3] = 1;
         }
         return renderer.createTexture(data.data(), width, 1, VK_FORMAT_R32G32B32A32_SFLOAT, 16, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
+    }
+    
+    bool DrawAtmoInspector(AtmosphereParams& params) {
+        bool valuesChanged = false;
+        ImGui::Begin("Atmosphere Inspector");
+        if (ImGui::DragFloat("Radius", &params.radius)) valuesChanged = true;
+        if (ImGui::DragFloat("Atmosphere Height", &params.atmosphereHeight)) valuesChanged = true;
+        if (ImGui::CollapsingHeader("Rayleigh")) {
+            ImGui::PushID("Rayleigh");
+            
+            if (ImGui::DragFloat("Scale Height", &params.rayleighScaleHeight)) valuesChanged = true;
+            {
+                ImGui::PushID("Beta");
+                float intensity = params.rayleighBeta.length();
+                Vector3 tint = params.rayleighBeta / intensity;
+                
+                if (ImGui::ColorEdit3("Rayleigh Beta", &tint.x)) valuesChanged = true; 
+                if (ImGui::DragFloat("Intensity", &intensity)) valuesChanged = true;
+                
+                params.rayleighBeta = normalize(tint) * intensity;
+                ImGui::PopID();
+            }
+            
+            ImGui::PopID();
+        }
+        if (ImGui::CollapsingHeader("Mie")) {
+            ImGui::PushID("Mie");
+            
+            if (ImGui::DragFloat("Mie Scale Height", &params.mieScaleHeight)) valuesChanged = true;
+            if (ImGui::DragFloat("Mie G", &params.mieG)) valuesChanged = true;
+            
+            {
+                ImGui::PushID("Beta");
+                float intensity = params.mieBeta.length();
+                Vector3 tint = params.mieBeta / intensity;
+                
+                if (ImGui::ColorEdit3("Mie Beta", &tint.x)) valuesChanged = true;
+                if (ImGui::DragFloat("Intensity", &intensity)) valuesChanged = true;
+                
+                params.mieBeta = normalize(tint) * intensity;
+                ImGui::PopID();
+            }
+            {
+                ImGui::PushID("Absorption");
+                float intensity = params.mieAbsorption.length();
+                Vector3 tint = params.mieAbsorption / intensity;
+                
+                if (ImGui::ColorEdit3("Mie Absorption", &tint.x)) valuesChanged = true;
+                if (ImGui::DragFloat("Intensity", &intensity)) valuesChanged = true;
+                
+                params.mieAbsorption = normalize(tint) * intensity;
+                ImGui::PopID();
+            }
+            ImGui::PopID();
+        }
+        ImGui::End();
+        return valuesChanged;
     }
 } // Caelus

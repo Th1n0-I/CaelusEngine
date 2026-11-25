@@ -342,6 +342,8 @@ int main() {
         }
         if (!io.WantCaptureMouse && io.MouseWheel != 0.0f) camera.GetDistance() *= pow(0.9, io.MouseWheel);
 
+        
+        static bool drawAtmoInspector = false;
         if (ImGui::BeginMainMenuBar()) {
             if (ImGui::BeginMenu("Renderer")) {
                 if (ImGui::BeginMenu("Clear Color")) {
@@ -365,6 +367,10 @@ int main() {
             }
             if (ImGui::BeginMenu("AtmosDebug")) {
                 ImGui::DragScalarN("Sun Intensity", ImGuiDataType_Double, &sunIntensity, 1, 0.1f);
+                
+                
+                ImGui::MenuItem("Atmosphere Inspector", nullptr, &drawAtmoInspector);
+                
                 ImGui::EndMenu();
             }
             
@@ -375,6 +381,11 @@ int main() {
             }
             ImGui::EndMainMenuBar();
         }
+        
+        if (drawAtmoInspector) 
+            if (Caelus::DrawAtmoInspector(bodies[3].atmosphereParams.value())) {
+                
+            }
         
         if (ImGui::IsKeyPressed(ImGuiKey_Period, false)) {
             timeScale *= 10;
